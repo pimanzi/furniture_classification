@@ -1,0 +1,242 @@
+[
+  {
+    "user_id": "0-0",
+    "timestamp": "2025-08-02T18:40:53.327035",
+    "response_time_ms": 3.5271644592285156,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "0-1",
+    "timestamp": "2025-08-02T18:40:53.427841",
+    "response_time_ms": 2.997875213623047,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "0-2",
+    "timestamp": "2025-08-02T18:40:53.528972",
+    "response_time_ms": 2.751588821411133,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "1-0",
+    "timestamp": "2025-08-02T18:40:53.630492",
+    "response_time_ms": 3.0879974365234375,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "1-1",
+    "timestamp": "2025-08-02T18:40:53.731532",
+    "response_time_ms": 3.648519515991211,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "1-2",
+    "timestamp": "2025-08-02T18:40:53.832018",
+    "response_time_ms": 3.668546676635742,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "2-0",
+    "timestamp": "2025-08-02T18:40:53.932517",
+    "response_time_ms": 3.734111785888672,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "2-1",
+    "timestamp": "2025-08-02T18:40:54.033323",
+    "response_time_ms": 3.3698081970214844,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "2-2",
+    "timestamp": "2025-08-02T18:40:54.134565",
+    "response_time_ms": 2.8600692749023438,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "3-0",
+    "timestamp": "2025-08-02T18:40:54.235863",
+    "response_time_ms": 2.974987030029297,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "3-1",
+    "timestamp": "2025-08-02T18:40:54.337219",
+    "response_time_ms": 3.1354427337646484,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "3-2",
+    "timestamp": "2025-08-02T18:40:54.437937",
+    "response_time_ms": 2.692699432373047,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "4-0",
+    "timestamp": "2025-08-02T18:40:54.539145",
+    "response_time_ms": 2.7120113372802734,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "4-1",
+    "timestamp": "2025-08-02T18:40:54.640554",
+    "response_time_ms": 2.967357635498047,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "4-2",
+    "timestamp": "2025-08-02T18:40:54.741895",
+    "response_time_ms": 2.9315948486328125,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "5-0",
+    "timestamp": "2025-08-02T18:40:54.842970",
+    "response_time_ms": 2.889871597290039,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "5-1",
+    "timestamp": "2025-08-02T18:40:54.944268",
+    "response_time_ms": 2.752065658569336,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "5-2",
+    "timestamp": "2025-08-02T18:40:55.045576",
+    "response_time_ms": 2.921581268310547,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "6-0",
+    "timestamp": "2025-08-02T18:40:55.146585",
+    "response_time_ms": 2.826690673828125,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "6-1",
+    "timestamp": "2025-08-02T18:40:55.247930",
+    "response_time_ms": 3.0868053436279297,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "6-2",
+    "timestamp": "2025-08-02T18:40:55.349434",
+    "response_time_ms": 3.3130645751953125,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "7-0",
+    "timestamp": "2025-08-02T18:40:55.450167",
+    "response_time_ms": 2.8159618377685547,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "7-1",
+    "timestamp": "2025-08-02T18:40:55.551707",
+    "response_time_ms": 3.057718276977539,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "7-2",
+    "timestamp": "2025-08-02T18:40:55.652823",
+    "response_time_ms": 2.7565956115722656,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "8-0",
+    "timestamp": "2025-08-02T18:40:55.753932",
+    "response_time_ms": 2.6819705963134766,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "8-1",
+    "timestamp": "2025-08-02T18:40:55.855476",
+    "response_time_ms": 2.9616355895996094,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "8-2",
+    "timestamp": "2025-08-02T18:40:55.956820",
+    "response_time_ms": 2.8176307678222656,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "9-0",
+    "timestamp": "2025-08-02T18:40:56.057886",
+    "response_time_ms": 2.7399063110351562,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "9-1",
+    "timestamp": "2025-08-02T18:40:56.159259",
+    "response_time_ms": 3.014087677001953,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "9-2",
+    "timestamp": "2025-08-02T18:40:56.260103",
+    "response_time_ms": 2.4924278259277344,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  }
+]

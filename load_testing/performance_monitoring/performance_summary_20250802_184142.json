@@ -1,0 +1,23 @@
+{
+  "test_duration_seconds": 29.869098663330078,
+  "total_samples": 29,
+  "cpu_stats": {
+    "avg": 36.689655172413794,
+    "max": 63.3,
+    "min": 17.8
+  },
+  "memory_stats": {
+    "avg": 74.01724137931035,
+    "max": 75.9,
+    "min": 72.3
+  },
+  "response_time_stats": {
+    "avg_ms": 3.2327586206896552,
+    "max_ms": 7.892847061157227,
+    "min_ms": 2.4566650390625
+  },
+  "availability_stats": {
+    "uptime_percentage": 100.0,
+    "total_downtime_samples": 0
+  }
+}

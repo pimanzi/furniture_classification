@@ -1,0 +1,79 @@
+{
+  "model_name": "MobileNetV2_Furniture_Classifier",
+  "timestamp": "2025-08-01 23:37:25",
+  "test_accuracy": 0.9979838709677419,
+  "test_precision": 0.9980040996871292,
+  "test_recall": 0.9979838709677419,
+  "test_f1": 0.9979838624110446,
+  "class_names": [
+    "almirah",
+    "chair",
+    "fridge",
+    "table",
+    "tv"
+  ],
+  "per_class_metrics": {
+    "precision": [
+      1.0,
+      1.0,
+      1.0,
+      0.9899665551839465,
+      1.0
+    ],
+    "recall": [
+      1.0,
+      0.9899497487437185,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "f1_score": [
+      1.0,
+      0.9949494949494949,
+      1.0,
+      0.9949579831932773,
+      1.0
+    ]
+  },
+  "confusion_matrix": [
+    [
+      598,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      591,
+      0,
+      6,
+      0
+    ],
+    [
+      0,
+      0,
+      594,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      592,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      595
+    ]
+  ],
+  "model_parameters": 2587205,
+  "training_samples": 9000,
+  "validation_samples": 3000,
+  "test_samples": 3000
+}

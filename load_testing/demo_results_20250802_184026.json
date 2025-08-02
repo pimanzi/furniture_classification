@@ -1,0 +1,82 @@
+[
+  {
+    "user_id": "0-0",
+    "timestamp": "2025-08-02T18:40:25.682822",
+    "response_time_ms": 3.445148468017578,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "0-1",
+    "timestamp": "2025-08-02T18:40:25.788334",
+    "response_time_ms": 7.226705551147461,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "1-0",
+    "timestamp": "2025-08-02T18:40:25.885165",
+    "response_time_ms": 3.4842491149902344,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  },
+  {
+    "user_id": "1-1",
+    "timestamp": "2025-08-02T18:40:25.985689",
+    "response_time_ms": 2.5293827056884766,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "2-0",
+    "timestamp": "2025-08-02T18:40:26.087129",
+    "response_time_ms": 2.873659133911133,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "2-1",
+    "timestamp": "2025-08-02T18:40:26.188475",
+    "response_time_ms": 3.129243850708008,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "3-0",
+    "timestamp": "2025-08-02T18:40:26.289163",
+    "response_time_ms": 2.6171207427978516,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_2.jpg"
+  },
+  {
+    "user_id": "3-1",
+    "timestamp": "2025-08-02T18:40:26.390273",
+    "response_time_ms": 2.6917457580566406,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "4-0",
+    "timestamp": "2025-08-02T18:40:26.491547",
+    "response_time_ms": 2.859830856323242,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_0.jpg"
+  },
+  {
+    "user_id": "4-1",
+    "timestamp": "2025-08-02T18:40:26.592624",
+    "response_time_ms": 2.862691879272461,
+    "success": true,
+    "status_code": 200,
+    "image_name": "demo_test_1.jpg"
+  }
+]

@@ -1,0 +1,6 @@
+Method,Name,Error,Occurrences
+GET,/health,CatchResponseError('Health check failed: 0'),95
+POST,/predict,CatchResponseError('Failed: 0'),1094
+GET,/health,CatchResponseError('Health failed: 0'),77
+POST,/predict,CatchResponseError('Prediction failed: 0'),107
+GET,/analytics,CatchResponseError('Analytics failed: 0'),33

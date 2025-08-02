@@ -1,0 +1,339 @@
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0, MobileNetV2
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.preprocessing.image import load_img, img_to_array, ImageDataGenerator
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import numpy as np
+import pandas as pd
+import os
+from datetime import datetime
+import pickle
+
+class FurnitureModelTrainer:
+    def __init__(self, img_size=224, batch_size=32, num_classes=5):
+        self.img_size = img_size
+        self.batch_size = batch_size
+        self.num_classes = num_classes
+        self.class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
+        
+    def create_model(self, input_shape=(224, 224, 3)):
+        """Create model with transfer learning"""
+        try:
+            print("Attempting to load EfficientNetB0...")
+            base_model = EfficientNetB0(
+                weights='imagenet',
+                include_top=False,
+                input_shape=input_shape
+            )
+            model_name = "EfficientNetB0"
+        except Exception as e:
+            print(f"EfficientNetB0 loading failed: {str(e)}")
+            print("Falling back to MobileNetV2...")
+            base_model = MobileNetV2(
+                weights='imagenet',
+                include_top=False,
+                input_shape=input_shape
+            )
+            model_name = "MobileNetV2"
+        
+        # Freeze base model initially
+        base_model.trainable = False
+    
+        inputs = base_model.input
+        x = base_model.output
+        x = GlobalAveragePooling2D()(x)
+        x = Dropout(0.3)(x)
+        x = Dense(256, activation='relu')(x)
+        x = Dropout(0.4)(x)
+        outputs = Dense(self.num_classes, activation='softmax')(x)
+        
+        model = Model(inputs, outputs)
+        return model, base_model, model_name
+    
+    def prepare_data_from_dataframe(self, df, validation_split=0.2):
+        """Prepare training data from DataFrame"""
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import LabelEncoder
+        from tensorflow.keras.utils import to_categorical
+        
+        # Print data info for debugging
+        print(f"Data shape: {df.shape}")
+        print(f"Unique classes: {df['class_name'].unique()}")
+        print(f"Class ID range: {df['class_id'].min()} to {df['class_id'].max()}")
+        
+        # Ensure class IDs are within expected range [0, 4]
+        valid_class_ids = set(range(self.num_classes))
+        df_filtered = df[df['class_id'].isin(valid_class_ids)].copy()
+        
+        if len(df_filtered) < len(df):
+            print(f"Warning: Filtered out {len(df) - len(df_filtered)} samples with invalid class IDs")
+        
+       
+        df_filtered['class_id_encoded'] = df_filtered['class_id']
+        
+        # Create a label encoder that maps to our expected class names
+        label_encoder = LabelEncoder()
+        label_encoder.fit(self.class_names) 
+        
+        # Check if we have enough samples for stratified split
+        class_counts = df_filtered['class_name'].value_counts()
+        min_samples_per_class = class_counts.min()
+        
+        if min_samples_per_class < 2 or len(df_filtered) < 10:
+            # If we have too few samples, don't use validation split
+            print(f"Warning: Insufficient data for validation split. Using all data for training.")
+            print(f"Minimum samples per class: {min_samples_per_class}")
+            
+            train_df = df_filtered.copy()
+            val_df = df_filtered.sample(min(len(df_filtered), 5), random_state=42) 
+            
+            y_train = to_categorical(train_df['class_id_encoded'], num_classes=self.num_classes)
+            y_val = to_categorical(val_df['class_id_encoded'], num_classes=self.num_classes)
+        else:
+            # Use stratified split only if we have enough samples
+            try:
+                train_df, val_df = train_test_split(
+                    df_filtered, test_size=validation_split, 
+                    stratify=df_filtered['class_name'], random_state=42
+                )
+            except ValueError:
+                # Fallback to random split if stratified fails
+                print("Stratified split failed, using random split...")
+                train_df, val_df = train_test_split(
+                    df_filtered, test_size=validation_split, random_state=42
+                )
+            
+            # Convert to one-hot encoding
+            y_train = to_categorical(train_df['class_id_encoded'], num_classes=self.num_classes)
+            y_val = to_categorical(val_df['class_id_encoded'], num_classes=self.num_classes)
+        
+        print(f"Final training samples: {len(train_df)}")
+        print(f"Final validation samples: {len(val_df)}")
+        print(f"Training labels shape: {y_train.shape}")
+        print(f"Validation labels shape: {y_val.shape}")
+        
+        return train_df, val_df, y_train, y_val, label_encoder
+    
+    def create_data_generator(self, df, labels, augment=False, shuffle=True):
+        """Create data generator from DataFrame"""
+        if augment:
+            datagen = ImageDataGenerator(
+                rotation_range=20,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
+                horizontal_flip=True,
+                zoom_range=0.2,
+                fill_mode='nearest',
+                rescale=1./255
+            )
+        else:
+            datagen = ImageDataGenerator(rescale=1./255)
+        
+        def data_generator():
+            indices = np.arange(len(df))
+            while True:
+                if shuffle:
+                    np.random.shuffle(indices)
+                
+                for start_idx in range(0, len(indices), self.batch_size):
+                    batch_indices = indices[start_idx:start_idx + self.batch_size]
+                    batch_paths = df.iloc[batch_indices]['image_path'].values
+                    batch_labels = labels[batch_indices]
+                    
+                    batch_images = []
+                    valid_labels = []
+                    
+                    for i, path in enumerate(batch_paths):
+                        try:
+                            if os.path.exists(path) and i < len(batch_labels):
+                                img = load_img(path, target_size=(self.img_size, self.img_size))
+                                img_array = img_to_array(img)
+                                
+                                if augment:
+                                    img_array = datagen.random_transform(img_array)
+                                
+                                img_array = img_array / 255.0
+                                batch_images.append(img_array)
+                                valid_labels.append(batch_labels[i])
+                        except Exception as e:
+                            print(f"Error processing image {path}: {str(e)}")
+                            continue
+                    
+                    if len(batch_images) > 0:
+                        yield np.array(batch_images), np.array(valid_labels)
+        
+        return data_generator
+    
+    def train_model(self, combined_data, epochs=10, model_save_path='models/retrained_model.h5'):
+        """Train model on combined data"""
+        print("Preparing data for retraining...")
+        
+        # Prepare data
+        train_df, val_df, y_train, y_val, label_encoder = self.prepare_data_from_dataframe(combined_data)
+        
+        print(f"Training samples: {len(train_df)}")
+        print(f"Validation samples: {len(val_df)}")
+        
+        # Create generators
+        train_generator = self.create_data_generator(train_df, y_train, augment=True, shuffle=True)
+        val_generator = self.create_data_generator(val_df, y_val, augment=False, shuffle=False)
+        
+        # Calculate steps
+        steps_per_epoch = len(train_df) // self.batch_size
+        validation_steps = len(val_df) // self.batch_size
+        
+        if steps_per_epoch == 0:
+            steps_per_epoch = 1
+        if validation_steps == 0:
+            validation_steps = 1
+        
+        # Create model
+        model, base_model, model_name = self.create_model()
+        
+        # Compile model
+        model.compile(
+            optimizer=Adam(learning_rate=0.001),
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        # Define callbacks
+        callbacks = [
+            EarlyStopping(
+                monitor='val_accuracy',
+                patience=5,
+                restore_best_weights=True,
+                verbose=1
+            ),
+            ModelCheckpoint(
+                model_save_path,
+                monitor='val_accuracy',
+                save_best_only=True,
+                verbose=1
+            ),
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.2,
+                patience=3,
+                min_lr=1e-7,
+                verbose=1
+            )
+        ]
+        
+        print("Starting model training...")
+        start_time = datetime.now()
+        
+        # Train model
+        history = model.fit(
+            train_generator(),
+            steps_per_epoch=steps_per_epoch,
+            epochs=epochs,
+            validation_data=val_generator(),
+            validation_steps=validation_steps,
+            callbacks=callbacks,
+            verbose=1
+        )
+        
+        end_time = datetime.now()
+        training_time = (end_time - start_time).total_seconds() / 60  
+        
+        # Get final accuracy
+        final_accuracy = max(history.history['val_accuracy'])
+        
+        # Save label encoder
+        encoder_path = model_save_path.replace('.h5', '_label_encoder.pkl')
+        with open(encoder_path, 'wb') as f:
+            pickle.dump(label_encoder, f)
+        
+        return {
+            'model': model,
+            'history': history,
+            'final_accuracy': final_accuracy,
+            'training_time': training_time,
+            'model_path': model_save_path,
+            'label_encoder': label_encoder,
+            'original_count': len(combined_data[combined_data['image_path'].str.contains('Furnitures')]),
+            'user_count': len(combined_data[~combined_data['image_path'].str.contains('Furnitures')])
+        }
+
+class FurniturePredictor:
+    def __init__(self, model_path='models/best_furniture_model.h5', 
+                 label_encoder_path='models/label_encoder.pkl'):
+        self.model_path = model_path
+        self.label_encoder_path = label_encoder_path
+        self.model = None
+        self.label_encoder = None
+        self.class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
+        self.img_size = 224
+        
+    def load_model(self):
+        """Load the trained model and label encoder"""
+        try:
+            if not os.path.exists(self.model_path):
+                print(f"Model file not found at {self.model_path}")
+                print("Please train a model first using the Retrain section.")
+                return False
+                
+            self.model = tf.keras.models.load_model(self.model_path)
+            print(f"Model loaded from {self.model_path}")
+            
+            # Try to load label encoder
+            if os.path.exists(self.label_encoder_path):
+                with open(self.label_encoder_path, 'rb') as f:
+                    self.label_encoder = pickle.load(f)
+                print("Label encoder loaded successfully")
+            else:
+                print("Label encoder not found, using default class names")
+                
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            return False
+        return True
+    
+    def predict_image(self, image_path):
+        """Make prediction on a single image"""
+        if self.model is None:
+            if not self.load_model():
+                return None
+        
+        try:
+            # Load and preprocess image
+            img = load_img(image_path, target_size=(self.img_size, self.img_size))
+            img_array = img_to_array(img)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array = img_array / 255.0
+            
+            # Make prediction
+            predictions = self.model.predict(img_array, verbose=0)
+            confidence = np.max(predictions[0])
+            predicted_class_idx = np.argmax(predictions[0])
+            
+            # Get class name
+            if self.label_encoder is not None:
+                predicted_class = self.label_encoder.classes_[predicted_class_idx]
+            else:
+                predicted_class = self.class_names[predicted_class_idx]
+            
+            return {
+                'predicted_class': predicted_class,
+                'confidence': float(confidence),
+                'all_predictions': predictions[0].tolist(),
+                'class_names': self.class_names
+            }
+            
+        except Exception as e:
+            print(f"Error making prediction: {str(e)}")
+            return None
+    
+    def predict_batch(self, image_paths):
+        """Make predictions on multiple images"""
+        results = []
+        for image_path in image_paths:
+            result = self.predict_image(image_path)
+            if result:
+                result['image_path'] = image_path
+                results.append(result)
+        return results

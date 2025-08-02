@@ -1,0 +1,4 @@
+Method,Name,Error,Occurrences
+POST,POST /stress_predict,CatchResponseError('Failed: 403'),559
+POST,POST /predict,CatchResponseError('Prediction failed: 403'),70
+POST,POST /rapid_predict,CatchResponseError('Failed: 403'),174
