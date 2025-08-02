@@ -309,6 +309,7 @@ class FurniturePredictor:
             print(f"Error loading model: {str(e)}")
             print("Falling back to demo mode")
             self.demo_mode = True
+            return True  # Return True so app can continue in demo mode
             return False
         return True
     
@@ -320,7 +321,7 @@ class FurniturePredictor:
             predicted_class = random.choice(self.class_names)
             confidence = round(random.uniform(0.85, 0.99), 3)
             return {
-                'prediction': predicted_class,
+                'predicted_class': predicted_class,
                 'confidence': confidence,
                 'demo_mode': True,
                 'message': 'Demo mode - using mock prediction'
