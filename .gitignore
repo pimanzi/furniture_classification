@@ -165,6 +165,14 @@ Thumbs.db
 
 
 
+# Load testing results
+load_testing/results/
+load_testing/*.html
+load_testing/*.csv
+
+# Streamlit files
+.streamlit/secrets.toml
+
 # Model results and outputs
 
 *.png
