@@ -8,8 +8,6 @@ import json
 
 class FurnitureDB:
     def __init__(self, db_path='database/furniture_classification.db'):
-        # Ensure database directory exists
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.db_path = db_path
         self.init_database()
     
@@ -264,47 +262,6 @@ class FurnitureDB:
             'original_data': original_data,
             'user_data': user_data,
             'retraining_sessions': retraining_sessions
-        }
-    
-    def get_all_training_sessions(self):
-        """Get detailed information about all training sessions"""
-        conn = sqlite3.connect(self.db_path)
-        
-        # Get all training sessions with detailed metrics
-        sessions = pd.read_sql_query('''
-            SELECT 
-                rs.id,
-                rs.session_name,
-                rs.original_data_count,
-                rs.user_data_count,
-                rs.total_data_count,
-                rs.final_accuracy,
-                rs.training_time_minutes,
-                rs.model_path,
-                rs.created_at,
-                COUNT(mm.id) as metrics_count
-            FROM retraining_sessions rs
-            LEFT JOIN model_metrics mm ON rs.id = mm.session_id
-            GROUP BY rs.id
-            ORDER BY rs.created_at DESC
-        ''', conn)
-        
-        # Get metrics for each session
-        all_metrics = pd.read_sql_query('''
-            SELECT 
-                mm.session_id,
-                mm.metric_name,
-                mm.metric_value,
-                mm.class_name
-            FROM model_metrics mm
-            ORDER BY mm.session_id, mm.metric_name, mm.class_name
-        ''', conn)
-        
-        conn.close()
-        
-        return {
-            'sessions': sessions,
-            'metrics': all_metrics
         }
     
     def get_combined_training_data(self):
