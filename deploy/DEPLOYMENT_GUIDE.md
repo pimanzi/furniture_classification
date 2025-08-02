@@ -40,14 +40,17 @@ Make sure these files are in your repository:
 - **Build Command**: `pip install -e .`
 - **Start Command**: `./deploy/start.sh`
 
-**Advanced Settings:**
-- **Python Version**: Will be determined from `pyproject.toml` (>=3.10)
-- **Auto-Deploy**: Yes (recommended)
+**Environment Variables (REQUIRED):**
+- **PYTHON_VERSION**: `3.10.13`
 
-### Step 3: Environment Variables (Optional)
-No additional environment variables are required. The app will use:
+### Step 3: Environment Variables (REQUIRED)
+
+**Set these environment variables in Render dashboard:**
+- **PYTHON_VERSION**: `3.10.13` (forces correct Python version)
+
+**Optional environment variables:**
 - `PORT`: Automatically set by Render
-- Default paths for models and database
+- Default paths for models and database will be used
 
 ### Step 4: Deploy
 1. Click "Create Web Service"

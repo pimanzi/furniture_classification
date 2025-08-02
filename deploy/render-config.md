@@ -1,12 +1,12 @@
 # Render Configuration for Furniture Classification App
 
 ## Build Configuration
-- **Runtime**: Python 3.11.9
+- **Runtime**: Python 3.10.13
 - **Build Command**: `pip install -r requirements.txt`
 - **Start Command**: `./deploy/start.sh`
 
 ## Environment Variables (Set in Render Dashboard)
-- `PYTHON_VERSION`: 3.11.9
+- `PYTHON_VERSION`: 3.10.13
 - `PORT`: (Automatically set by Render)
 
 ## Service Type
