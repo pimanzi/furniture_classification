@@ -26,15 +26,84 @@ def create_directories():
         print(f"✓ Created/verified directory: {directory}")
 
 def initialize_database():
-    """Initialize SQLite database"""
+    """Initialize SQLite database and populate with training data"""
     try:
         from src.utils.database import FurnitureDB
         db = FurnitureDB()
         print("✓ Database initialized successfully")
+        
+        # Check if we need to populate training data
+        import sqlite3
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM training_data")
+        count = cursor.fetchone()[0]
+        conn.close()
+        
+        if count == 0:
+            print("📊 Populating database with training data...")
+            populate_training_data(db)
+        else:
+            print(f"✓ Database already contains {count} training samples")
+            
         return True
     except Exception as e:
         print(f"✗ Database initialization failed: {e}")
         return False
+
+def populate_training_data(db):
+    """Populate database with processed training data"""
+    try:
+        import numpy as np
+        import pickle
+        import os
+        
+        processed_dir = 'processed_data'
+        
+        # Check if processed data exists
+        required_files = [
+            'paths_train.npy', 'paths_val.npy', 'paths_test.npy',
+            'y_train.npy', 'y_val.npy', 'y_test.npy',
+            'config.pkl'
+        ]
+        
+        missing_files = [f for f in required_files if not os.path.exists(os.path.join(processed_dir, f))]
+        
+        if missing_files:
+            print(f"⚠ Missing processed data files: {missing_files}")
+            print("  Skipping training data population")
+            return
+        
+        # Load processed data
+        paths_train = np.load(os.path.join(processed_dir, 'paths_train.npy'))
+        paths_val = np.load(os.path.join(processed_dir, 'paths_val.npy'))
+        paths_test = np.load(os.path.join(processed_dir, 'paths_test.npy'))
+        y_train = np.load(os.path.join(processed_dir, 'y_train.npy'))
+        y_val = np.load(os.path.join(processed_dir, 'y_val.npy'))
+        y_test = np.load(os.path.join(processed_dir, 'y_test.npy'))
+        
+        # Load configuration
+        with open(os.path.join(processed_dir, 'config.pkl'), 'rb') as f:
+            config = pickle.load(f)
+        
+        class_names = config['classes']
+        
+        # Populate database
+        db.populate_original_data(
+            paths_train, paths_val, paths_test,
+            y_train, y_val, y_test, 
+            class_names
+        )
+        
+        print(f"✓ Populated database with training data:")
+        print(f"  - Training samples: {len(paths_train)}")
+        print(f"  - Validation samples: {len(paths_val)}")
+        print(f"  - Test samples: {len(paths_test)}")
+        print(f"  - Classes: {class_names}")
+        
+    except Exception as e:
+        print(f"⚠ Failed to populate training data: {e}")
+        print("  Database will work but training history won't be available")
 
 def check_model_availability():
     """Check if model files exist"""
