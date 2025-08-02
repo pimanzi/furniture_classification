@@ -106,14 +106,35 @@ def populate_training_data(db):
         print("  Database will work but training history won't be available")
 
 def check_model_availability():
-    """Check if model files exist"""
+    """Check if model files exist and TensorFlow is available"""
     model_path = "models/best_furniture_model.h5"
+    
+    # Check TensorFlow availability
+    try:
+        import tensorflow as tf
+        tensorflow_available = True
+        print("✓ TensorFlow is available")
+    except ImportError:
+        tensorflow_available = False
+        print("⚠ TensorFlow not available - will run in demo mode")
+    
+    # Check model file
     if os.path.exists(model_path):
         print(f"✓ Model found at: {model_path}")
-        return True
+        model_available = True
     else:
         print(f"⚠ Model not found at: {model_path}")
-        return False
+        model_available = False
+        
+    if tensorflow_available and model_available:
+        print("✓ Full prediction functionality available")
+        return True
+    elif model_available:
+        print("⚠ Model available but TensorFlow missing - demo mode predictions")
+        return True
+    else:
+        print("⚠ Running in demo mode - mock predictions only")
+        return True  # Still return True as app can run in demo mode
 
 def create_dummy_model_info():
     """Create model info for demo mode"""
