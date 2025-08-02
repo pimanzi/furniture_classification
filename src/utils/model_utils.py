@@ -294,23 +294,24 @@ class FurniturePredictor:
                 self.demo_mode = True
                 return True
                 
+            print(f"Loading model from: {self.model_path}")
             self.model = tf.keras.models.load_model(self.model_path)
-            print(f"Model loaded from {self.model_path}")
+            print(f"✓ Model loaded successfully from {self.model_path}")
             
             # Try to load label encoder
             if os.path.exists(self.label_encoder_path):
                 with open(self.label_encoder_path, 'rb') as f:
                     self.label_encoder = pickle.load(f)
-                print("Label encoder loaded successfully")
+                print(f"✓ Label encoder loaded from {self.label_encoder_path}")
             else:
-                print("Label encoder not found, using default class names")
+                print(f"Label encoder not found at {self.label_encoder_path}, using default class names")
+                print(f"Default classes: {self.class_names}")
                 
         except Exception as e:
             print(f"Error loading model: {str(e)}")
             print("Falling back to demo mode")
             self.demo_mode = True
             return True  # Return True so app can continue in demo mode
-            return False
         return True
     
     def predict_image(self, image_path):
@@ -320,9 +321,17 @@ class FurniturePredictor:
             import random
             predicted_class = random.choice(self.class_names)
             confidence = round(random.uniform(0.85, 0.99), 3)
+            
+            # Create mock all_predictions array for demo mode
+            mock_predictions = [0.1] * len(self.class_names)
+            predicted_idx = self.class_names.index(predicted_class)
+            mock_predictions[predicted_idx] = confidence
+            
             return {
                 'predicted_class': predicted_class,
                 'confidence': confidence,
+                'all_predictions': mock_predictions,
+                'class_names': self.class_names,
                 'demo_mode': True,
                 'message': 'Demo mode - using mock prediction'
             }

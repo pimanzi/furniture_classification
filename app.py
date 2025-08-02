@@ -424,6 +424,8 @@ if 'db' not in st.session_state:
     st.session_state.db = FurnitureDB()
 if 'predictor' not in st.session_state:
     st.session_state.predictor = FurniturePredictor()
+    # Load the model immediately
+    st.session_state.predictor.load_model()
 if 'trainer' not in st.session_state:
     st.session_state.trainer = FurnitureModelTrainer()
 if 'selected_files' not in st.session_state:
