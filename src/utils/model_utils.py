@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import pickle
 
-# Try to import TensorFlow, fallback to demo mode if not available
+# Import TensorFlow and required modules
 try:
     import tensorflow as tf
     from tensorflow.keras.applications import EfficientNetB0, MobileNetV2
@@ -13,34 +13,20 @@ try:
     from tensorflow.keras.optimizers import Adam
     from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
     from tensorflow.keras.preprocessing.image import load_img, img_to_array, ImageDataGenerator
-    TENSORFLOW_AVAILABLE = True
+    from tensorflow.keras.utils import to_categorical
     print("✓ TensorFlow loaded successfully")
+    TENSORFLOW_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠ TensorFlow not available: {e}")
-    print("  This is likely due to Python 3.13 compatibility issues")
-    print("  Running in demo mode - predictions will use realistic mock data")
+    print(f"⚠️ TensorFlow not available: {e}")
     TENSORFLOW_AVAILABLE = False
-    
-    # Mock TensorFlow functions for demo mode
-    class MockTensorFlow:
-        @staticmethod
-        def load_img(path, target_size):
-            from PIL import Image
-            return Image.open(path).convert('RGB').resize(target_size)
-        
-        @staticmethod
-        def img_to_array(img):
-            import numpy as np
-            return np.array(img)
-    
-    # Provide mock functions
-    load_img = MockTensorFlow.load_img
-    img_to_array = MockTensorFlow.img_to_array
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 class FurnitureModelTrainer:
     def __init__(self, img_size=224, batch_size=32, num_classes=5):
+        if not TENSORFLOW_AVAILABLE:
+            raise ImportError("TensorFlow is required for model training but is not available.")
+        
         self.img_size = img_size
         self.batch_size = batch_size
         self.num_classes = num_classes
@@ -84,14 +70,6 @@ class FurnitureModelTrainer:
         """Prepare training data from DataFrame"""
         from sklearn.model_selection import train_test_split
         from sklearn.preprocessing import LabelEncoder
-        
-        if TENSORFLOW_AVAILABLE:
-            from tensorflow.keras.utils import to_categorical
-        else:
-            # Mock to_categorical for demo mode
-            def to_categorical(y, num_classes):
-                import numpy as np
-                return np.eye(num_classes)[y]
         
         # Print data info for debugging
         print(f"Data shape: {df.shape}")
@@ -296,27 +274,23 @@ class FurnitureModelTrainer:
 class FurniturePredictor:
     def __init__(self, model_path='models/best_furniture_model.h5', 
                  label_encoder_path='models/label_encoder.pkl'):
+        if not TENSORFLOW_AVAILABLE:
+            raise ImportError("TensorFlow is required for predictions but is not available.")
+            
         self.model_path = model_path
         self.label_encoder_path = label_encoder_path
         self.model = None
         self.label_encoder = None
         self.class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
         self.img_size = 224
-        self.demo_mode = not TENSORFLOW_AVAILABLE
         
     def load_model(self):
         """Load the trained model and label encoder"""
-        if not TENSORFLOW_AVAILABLE:
-            print("⚠ TensorFlow not available - running in demo mode")
-            print("  Predictions will return mock results")
-            return True
-            
         try:
             if not os.path.exists(self.model_path):
                 print(f"Model file not found at {self.model_path}")
                 print("Please train a model first using the Retrain section.")
-                self.demo_mode = True
-                return True
+                return False
                 
             print(f"Loading model from: {self.model_path}")
             self.model = tf.keras.models.load_model(self.model_path)
@@ -333,77 +307,19 @@ class FurniturePredictor:
                 
         except Exception as e:
             print(f"Error loading model: {str(e)}")
-            print("Falling back to demo mode")
-            self.demo_mode = True
-            return True  # Return True so app can continue in demo mode
+            return False
         return True
     
     def predict_image(self, image_path):
         """Make prediction on a single image"""
-        if self.demo_mode or not TENSORFLOW_AVAILABLE:
-            # Enhanced demo prediction with better logic
-            import random
-            import os
-            
-            # Try to guess from filename or provide realistic chair prediction
-            filename = os.path.basename(image_path).lower()
-            
-            # If filename contains furniture type, use that
-            if 'chair' in filename:
-                predicted_class = 'Chair'
-                confidence = round(random.uniform(0.92, 0.99), 3)
-            elif 'table' in filename:
-                predicted_class = 'Table'
-                confidence = round(random.uniform(0.88, 0.96), 3)
-            elif 'almirah' in filename or 'wardrobe' in filename:
-                predicted_class = 'Almirah'
-                confidence = round(random.uniform(0.85, 0.94), 3)
-            elif 'fridge' in filename or 'refrigerator' in filename:
-                predicted_class = 'Fridge'
-                confidence = round(random.uniform(0.89, 0.97), 3)
-            elif 'tv' in filename or 'television' in filename:
-                predicted_class = 'TV'
-                confidence = round(random.uniform(0.87, 0.95), 3)
-            else:
-                # For your chair image, default to Chair with high confidence
-                predicted_class = 'Chair'
-                confidence = round(random.uniform(0.92, 0.99), 3)
-            
-            # Create realistic all_predictions array
-            mock_predictions = [0.02, 0.03, 0.02, 0.02, 0.02]  # Low values for others
-            predicted_idx = self.class_names.index(predicted_class)
-            mock_predictions[predicted_idx] = confidence
-            
-            # Normalize to sum to 1
-            remaining = 1.0 - confidence
-            for i in range(len(mock_predictions)):
-                if i != predicted_idx:
-                    mock_predictions[i] = remaining / (len(mock_predictions) - 1)
-            
-            return {
-                'predicted_class': predicted_class,
-                'confidence': confidence,
-                'all_predictions': mock_predictions,
-                'class_names': self.class_names,
-                'demo_mode': True,
-                'message': f'Demo mode - Smart prediction based on analysis'
-            }
-            
         if self.model is None:
             if not self.load_model():
                 return None
         
         try:
             # Load and preprocess image
-            if TENSORFLOW_AVAILABLE:
-                img = load_img(image_path, target_size=(self.img_size, self.img_size))
-                img_array = img_to_array(img)
-            else:
-                # Fallback image loading with PIL
-                from PIL import Image
-                img = Image.open(image_path).convert('RGB').resize((self.img_size, self.img_size))
-                img_array = np.array(img)
-                
+            img = load_img(image_path, target_size=(self.img_size, self.img_size))
+            img_array = img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0)
             img_array = img_array / 255.0
             

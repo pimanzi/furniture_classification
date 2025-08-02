@@ -352,3 +352,40 @@ class FurnitureDB:
         cursor.execute('DELETE FROM user_data')
         conn.commit()
         conn.close()
+    
+    def get_all_training_sessions(self):
+        """Get all training sessions with detailed information"""
+        conn = sqlite3.connect(self.db_path)
+        
+        # Get all retraining sessions
+        sessions = pd.read_sql_query('''
+            SELECT 
+                id,
+                session_name,
+                original_data_count,
+                user_data_count,
+                total_data_count,
+                final_accuracy,
+                training_time_minutes,
+                model_path,
+                created_at
+            FROM retraining_sessions
+            ORDER BY created_at DESC
+        ''', conn)
+        
+        # Get metrics for each session
+        metrics = pd.read_sql_query('''
+            SELECT 
+                session_id,
+                metric_name,
+                metric_value,
+                class_name
+            FROM model_metrics
+        ''', conn)
+        
+        conn.close()
+        
+        return {
+            'sessions': sessions,
+            'metrics': metrics
+        }
