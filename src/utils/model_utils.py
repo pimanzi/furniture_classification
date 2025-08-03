@@ -272,7 +272,7 @@ class FurnitureModelTrainer:
         }
 
 class FurniturePredictor:
-    def __init__(self, model_path='models/best_furniture_model_compatible.h5', 
+    def __init__(self, model_path='models/best_furniture_model_tf215_compatible.h5', 
                  label_encoder_path='models/label_encoder.pkl'):
         if not TENSORFLOW_AVAILABLE:
             raise ImportError("TensorFlow is required for predictions but is not available.")
