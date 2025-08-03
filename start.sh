@@ -20,15 +20,15 @@ python -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} load
 
 # Check if model files exist
 echo "📁 Checking model files..."
-if [ ! -f "models/best_furniture_model.h5" ]; then
-    echo "❌ Model file not found!"
+if [ ! -f "models/best_furniture_model_compatible.h5" ]; then
+    echo "❌ Compatible model file not found!"
     ls -la models/ || echo "Models directory not found"
     exit 1
 fi
 
 # Check model file size
-MODEL_SIZE=$(stat -c%s "models/best_furniture_model.h5")
-echo "✅ Model file found: ${MODEL_SIZE} bytes"
+MODEL_SIZE=$(stat -c%s "models/best_furniture_model_compatible.h5")
+echo "✅ Compatible model file found: ${MODEL_SIZE} bytes"
 
 # Check if label encoder exists (after our fix)
 if [ ! -f "models/label_encoder.pkl" ]; then
@@ -57,7 +57,7 @@ except Exception as e:
 print('Testing TensorFlow model loading...')
 try:
     import tensorflow as tf
-    model = tf.keras.models.load_model('models/best_furniture_model.h5')
+    model = tf.keras.models.load_model('models/best_furniture_model_compatible.h5')
     print('✅ Model loaded successfully!')
     print(f'Model input shape: {model.input_shape}')
     print(f'Model output shape: {model.output_shape}')
