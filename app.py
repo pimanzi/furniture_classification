@@ -8,7 +8,8 @@ import shutil
 from PIL import Image
 
 from src.utils.database import FurnitureDB
-from src.utils.model_utils import FurniturePredictor, FurnitureModelTrainer
+from src.utils.model_utils import FurnitureModelTrainer
+from src.utils.memory_optimized_model import get_global_predictor
 
 st.set_page_config(
     page_title="Furniture AI",
@@ -417,42 +418,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 'Home'
-if 'db' not in st.session_state:
-    try:
-        st.session_state.db = FurnitureDB()
-        print("✓ Database initialized successfully")
-    except Exception as e:
-        print(f"❌ Database initialization error: {e}")
-        st.error(f"Database initialization failed: {e}")
-if 'predictor' not in st.session_state:
-    try:
-        st.session_state.predictor = FurniturePredictor()
-        # Load the model immediately
-        success = st.session_state.predictor.load_model()
-        if success:
-            print("✓ Predictor initialized and model loaded successfully")
-        else:
-            print("❌ Failed to load model - check model files")
-            st.error("Failed to load model. Check that model files exist and are accessible.")
-    except Exception as e:
-        print(f"❌ Predictor initialization error: {e}")
-        st.error(f"Predictor initialization failed: {e}")
-        import traceback
-        traceback.print_exc()
-if 'trainer' not in st.session_state:
-    try:
-        st.session_state.trainer = FurnitureModelTrainer()
-        print("✓ Trainer initialized successfully")
-    except Exception as e:
-        print(f"❌ Trainer initialization error: {e}")
-        st.error(f"Trainer initialization failed: {e}")
-if 'selected_files' not in st.session_state:
-    st.session_state.selected_files = []
-if 'file_labels' not in st.session_state:
-    st.session_state.file_labels = {}
+# Initialize memory-optimized predictor
+print("🔄 Initializing memory-optimized predictor...")
+try:
+    # Use global predictor to save memory
+    if 'predictor' not in st.session_state:
+        st.session_state.predictor = get_global_predictor()
+        print("✓ Memory-optimized predictor initialized successfully")
+    else:
+        print("✓ Using existing predictor instance")
+except Exception as e:
+    print(f"❌ Predictor initialization error: {e}")
+    st.error(f"Predictor initialization failed: {e}")
 
 def navigation():    
     col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
@@ -1214,6 +1191,8 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         with col3:
             st.metric("Total Data Used", len(combined_data))
         
+        # Create new predictor instance for retrained model
+        from src.utils.model_utils import FurniturePredictor
         st.session_state.predictor = FurniturePredictor(
             model_path=model_save_path,
             label_encoder_path=model_save_path.replace('.h5', '_label_encoder.pkl')
@@ -1333,7 +1312,7 @@ def show_debug():
                 from src.utils.model_utils import FurniturePredictor
                 st.success("✅ Successfully imported FurniturePredictor")
                 
-                predictor = FurniturePredictor()
+                predictor = get_global_predictor()
                 st.success("✅ Predictor initialized")
                 
                 success = predictor.load_model()

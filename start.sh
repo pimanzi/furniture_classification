@@ -77,18 +77,19 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-print('Testing FurniturePredictor with SavedModel...')
+print('Testing memory-optimized predictor with SavedModel...')
 try:
-    from src.utils.model_utils import FurniturePredictor
-    predictor = FurniturePredictor()
-    success = predictor.load_model()
-    if success:
-        print('✅ FurniturePredictor works with SavedModel!')
+    from src.utils.memory_optimized_model import get_global_predictor
+    predictor = get_global_predictor()
+    health = predictor.health_check()
+    if health['status'] == 'healthy':
+        print('✅ Memory-optimized predictor works with SavedModel!')
+        print(f'Model output shape: {health.get("output_shape", "Unknown")}')
     else:
-        print('❌ FurniturePredictor failed to load SavedModel')
+        print(f'❌ Memory-optimized predictor health check failed: {health["message"]}')
         sys.exit(1)
 except Exception as e:
-    print(f'❌ FurniturePredictor import/init failed: {e}')
+    print(f'❌ Memory-optimized predictor import/init failed: {e}')
     import traceback
     traceback.print_exc()
     sys.exit(1)
