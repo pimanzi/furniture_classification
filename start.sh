@@ -20,15 +20,15 @@ python -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} load
 
 # Check if model files exist
 echo "📁 Checking model files..."
-if [ ! -f "models/furniture_model.keras" ]; then
-    echo "❌ .keras model file not found!"
+if [ ! -d "models/furniture_savedmodel" ]; then
+    echo "❌ SavedModel directory not found!"
     ls -la models/ || echo "Models directory not found"
     exit 1
 fi
 
-# Check model file size
-MODEL_SIZE=$(stat -c%s "models/furniture_model.keras")
-echo "✅ .keras model file found: ${MODEL_SIZE} bytes"
+# Check SavedModel directory contents
+echo "✅ SavedModel directory found"
+ls -la models/furniture_savedmodel/ || echo "Could not list SavedModel contents"
 
 # Check if label encoder exists (after our fix)
 if [ ! -f "models/label_encoder.pkl" ]; then
@@ -49,22 +49,20 @@ print('Models directory contents:')
 try:
     import os
     for f in os.listdir('models/'):
-        size = os.path.getsize(f'models/{f}')
-        print(f'  {f}: {size} bytes')
+        if os.path.isdir(f'models/{f}'):
+            print(f'  {f}/ (directory)')
+        else:
+            size = os.path.getsize(f'models/{f}')
+            print(f'  {f}: {size} bytes')
 except Exception as e:
     print(f'Error listing models: {e}')
 
-print('Testing TensorFlow model loading...')
+print('Testing TensorFlow availability...')
 try:
     import tensorflow as tf
-    model = tf.keras.models.load_model('models/furniture_model.keras')
-    print('✅ .keras model loaded successfully!')
-    print(f'Model input shape: {model.input_shape}')
-    print(f'Model output shape: {model.output_shape}')
+    print(f'✅ TensorFlow {tf.__version__} available')
 except Exception as e:
-    print(f'❌ .keras model loading failed: {e}')
-    import traceback
-    traceback.print_exc()
+    print(f'❌ TensorFlow import failed: {e}')
     sys.exit(1)
 
 print('Testing label encoder...')
@@ -79,15 +77,15 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-print('Testing FurniturePredictor import...')
+print('Testing FurniturePredictor with SavedModel...')
 try:
     from src.utils.model_utils import FurniturePredictor
     predictor = FurniturePredictor()
     success = predictor.load_model()
     if success:
-        print('✅ FurniturePredictor works!')
+        print('✅ FurniturePredictor works with SavedModel!')
     else:
-        print('❌ FurniturePredictor failed to load model')
+        print('❌ FurniturePredictor failed to load SavedModel')
         sys.exit(1)
 except Exception as e:
     print(f'❌ FurniturePredictor import/init failed: {e}')
@@ -95,7 +93,7 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-print('🎉 All model tests passed!')
+print('🎉 All SavedModel tests passed!')
 " || {
     echo "❌ Model loading test failed!"
     exit 1
