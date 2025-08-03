@@ -1,37 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "furniture-classification"
 version = "1.0.0"
-description = "A comprehensive deep learning application for classifying furniture images"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+description = "A deep learning furniture classification system"
+authors = [{name = "pimanzi", email = "your-email@example.com"}]
+license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+]
 
 dependencies = [
     "streamlit>=1.28.0",
-    "tensorflow>=2.13.0",
-    "scikit-learn>=1.3.0",
+    "tensorflow==2.15.0",
+    "pillow>=9.5.0",
+    "numpy>=1.24.0",
     "pandas>=2.0.0",
-    "numpy>=1.24.0,<2.3.0",
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "plotly>=5.17.0",
-    "Pillow>=10.0.0",
-    "opencv-python-headless>=4.8.0",
-    "requests>=2.31.0",
-    "psutil>=5.9.0",
-    "h5py>=3.9.0",
+    "scikit-learn>=1.3.0",
+    "opencv-python>=4.8.0",
+    "plotly>=5.15.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
-    "python-multipart>=0.0.6"
+    "python-multipart>=0.0.6",
+    "requests>=2.31.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "jupyter>=1.0.0",
-    "notebook>=7.0.0",
-    "locust>=2.16.0"
+    "notebook>=6.5.0",
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
 ]
 
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[project.urls]
+Homepage = "https://github.com/pimanzi/furniture_classification"
+Repository = "https://github.com/pimanzi/furniture_classification"
+Issues = "https://github.com/pimanzi/furniture_classification/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "app*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
