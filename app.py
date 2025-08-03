@@ -435,8 +435,20 @@ except Exception as e:
     print(f"❌ Predictor initialization error: {e}")
     st.error(f"Predictor initialization failed: {e}")
 
+# Initialize session state
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'Home'
+
 def navigation():    
-    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
+    # Initialize session state if not exists
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'Home'
+    
+    # Initialize database connection if not exists
+    if 'db' not in st.session_state:
+        st.session_state.db = FurnitureDB()
+    
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
         if st.button("🏠 Home", key="nav_home"):
@@ -459,11 +471,6 @@ def navigation():
             if 'selected_files' not in st.session_state:
                 st.session_state.selected_files = []
                 st.session_state.file_labels = {}
-            st.rerun()
-    
-    with col5:
-        if st.button("🔧 Debug", key="nav_debug"):
-            st.session_state.current_page = 'Debug'
             st.rerun()
 
 def show_home():
@@ -527,8 +534,8 @@ def show_home():
             st.markdown('<div class="metric-label">Training Sessions</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
             
-        except Exception:
-            st.info("Statistics will be available after making predictions")
+        except Exception as e:
+            st.error(f"Error loading statistics: {str(e)}")
 
 def show_predict():
     st.markdown("""
@@ -1213,186 +1220,6 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         if 'temp_dir' in locals() and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
 
-def show_debug():
-    st.markdown("""
-    <div class="main-header">
-        <h1>🔧 System Debug</h1>
-        <p>Diagnostic information for troubleshooting deployment issues</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # System Information
-    st.markdown("### 🖥️ System Information")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        import sys
-        st.write(f"**Python Version**: {sys.version}")
-        st.write(f"**Platform**: {sys.platform}")
-        st.write(f"**Working Directory**: {os.getcwd()}")
-    
-    with col2:
-        # Check critical packages
-        st.write("**Critical Packages**:")
-        critical_packages = ['tensorflow', 'streamlit', 'numpy', 'pillow', 'scikit-learn']
-        
-        for package in critical_packages:
-            try:
-                __import__(package)
-                module = sys.modules[package]
-                version = getattr(module, '__version__', 'Unknown')
-                st.write(f"✅ {package}: {version}")
-            except ImportError:
-                st.write(f"❌ {package}: NOT FOUND")
-    
-    # TensorFlow Check
-    st.markdown("### 🤖 TensorFlow Status")
-    try:
-        import tensorflow as tf
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write(f"**Version**: {tf.__version__}")
-            st.write(f"**Built with CUDA**: {tf.test.is_built_with_cuda()}")
-        
-        with col2:
-            devices = tf.config.list_physical_devices()
-            st.write(f"**Available Devices**: {[d.name for d in devices]}")
-            
-            # Test basic operation
-            try:
-                test_tensor = tf.constant([1, 2, 3])
-                st.write(f"**Basic Operation Test**: ✅ {test_tensor.numpy()}")
-            except Exception as e:
-                st.write(f"**Basic Operation Test**: ❌ {str(e)}")
-                
-    except Exception as e:
-        st.error(f"TensorFlow Error: {str(e)}")
-    
-    # File System Check
-    st.markdown("### 📁 File System Status")
-    critical_paths = [
-        'models/',
-        'models/best_furniture_model.h5',
-        'models/label_encoder.pkl',
-        'database/',
-        'database/furniture_classification.db',
-        'src/',
-        'src/utils/',
-        'src/utils/model_utils.py'
-    ]
-    
-    col1, col2 = st.columns(2)
-    mid_point = len(critical_paths) // 2
-    
-    with col1:
-        for path in critical_paths[:mid_point]:
-            if os.path.exists(path):
-                if os.path.isfile(path):
-                    size = os.path.getsize(path)
-                    st.write(f"✅ {path}: {size:,} bytes")
-                else:
-                    st.write(f"✅ {path}: directory")
-            else:
-                st.write(f"❌ {path}: NOT FOUND")
-    
-    with col2:
-        for path in critical_paths[mid_point:]:
-            if os.path.exists(path):
-                if os.path.isfile(path):
-                    size = os.path.getsize(path)
-                    st.write(f"✅ {path}: {size:,} bytes")
-                else:
-                    st.write(f"✅ {path}: directory")
-            else:
-                st.write(f"❌ {path}: NOT FOUND")
-    
-    # Model Loading Test
-    st.markdown("### 🧠 Model Loading Test")
-    
-    if st.button("🧪 Test Model Loading", type="primary"):
-        with st.spinner("Testing model loading..."):
-            try:
-                from src.utils.model_utils import FurniturePredictor
-                st.success("✅ Successfully imported FurniturePredictor")
-                
-                predictor = FurniturePredictor()
-                st.success("✅ Predictor initialized")
-                
-                success = predictor.load_model()
-                
-                if success:
-                    st.success("✅ Model loaded successfully!")
-                    st.write(f"**Model Status**: {predictor.model is not None}")
-                    st.write(f"**Label Encoder Status**: {predictor.label_encoder is not None}")
-                    
-                    if predictor.label_encoder:
-                        classes = list(predictor.label_encoder.classes_)
-                        st.write(f"**Label Encoder Classes**: {classes}")
-                        
-                        # Check class order
-                        expected = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
-                        if classes == expected:
-                            st.success("✅ Class order is correct!")
-                        else:
-                            st.error(f"❌ Class order mismatch! Expected: {expected}, Got: {classes}")
-                    else:
-                        st.warning("⚠️ Using default class names")
-                        
-                    # Test prediction
-                    st.markdown("#### 🎯 Prediction Test")
-                    try:
-                        import tempfile
-                        import numpy as np
-                        from PIL import Image
-                        
-                        # Create test image
-                        test_image = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
-                        
-                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
-                            temp_path = temp_file.name
-                            Image.fromarray(test_image).save(temp_path)
-                        
-                        result = predictor.predict_image(temp_path)
-                        
-                        if result:
-                            st.success(f"✅ Prediction Success: {result['predicted_class']} (confidence: {result['confidence']:.3f})")
-                            st.json(result)
-                        else:
-                            st.error("❌ Prediction returned None")
-                        
-                        # Cleanup
-                        os.unlink(temp_path)
-                        
-                    except Exception as pred_error:
-                        st.error(f"❌ Prediction test failed: {str(pred_error)}")
-                        st.code(str(pred_error))
-                        
-                else:
-                    st.error("❌ Model loading failed")
-                    
-            except Exception as e:
-                st.error(f"❌ Model loading test failed: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-    
-    # Resource Check
-    st.markdown("### 💾 Resource Status")
-    try:
-        import psutil
-        memory = psutil.virtual_memory()
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Available Memory", f"{memory.available / (1024**3):.2f} GB")
-        with col2:
-            st.metric("Memory Usage", f"{memory.percent}%")
-        with col3:
-            st.metric("CPU Count", psutil.cpu_count())
-            
-    except ImportError:
-        st.warning("⚠️ psutil not available - cannot check resources")
-
 def main():
     navigation()
     
@@ -1404,8 +1231,6 @@ def main():
         show_analytics()
     elif st.session_state.current_page == 'Retrain':
         show_retrain()
-    elif st.session_state.current_page == 'Debug':
-        show_debug()
     
     st.markdown("""
     <div class="footer">
