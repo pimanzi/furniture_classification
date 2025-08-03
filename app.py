@@ -485,6 +485,10 @@ if (st.session_state.get('training_completed', False) and
 # Recovery mechanism: check for recent training completion from database
 if not st.session_state.get('training_completed', False):
     try:
+        # Initialize database connection if not exists
+        if 'db' not in st.session_state:
+            st.session_state.db = FurnitureDB()
+        
         # Check if there's a recent training session in the database
         recent_sessions = st.session_state.db.get_all_training_sessions()
         if recent_sessions and len(recent_sessions['sessions']) > 0:
@@ -521,7 +525,34 @@ def navigation():
     
     # Prevent navigation during training
     if st.session_state.get('training_in_progress', False):
-        st.warning("⏳ Training in progress... Navigation disabled to prevent interruption.")
+        st.error("🚫 **TRAINING IN PROGRESS - NAVIGATION BLOCKED**")
+        st.warning("⏳ Training in progress... All navigation is disabled to prevent interruption.")
+        
+        # Show current training progress if available
+        if st.session_state.get('training_session_id'):
+            st.info(f"🔄 **Current Training Session:** {st.session_state.training_session_id}")
+        
+        # Show a prominent warning
+        st.markdown("""
+        <div style="background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); 
+                    padding: 1.5rem; border-radius: 10px; color: white; text-align: center; 
+                    margin: 1rem 0; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);">
+            <h3 style="color: white !important; margin: 0;">
+                🚫 DO NOT CLOSE THIS PAGE OR NAVIGATE AWAY
+            </h3>
+            <p style="color: rgba(255, 255, 255, 0.9) !important; margin: 0.5rem 0 0 0;">
+                Training will be interrupted if you leave this page
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Only show cancel button
+        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+        with col2:
+            if st.button("🛑 **Cancel Training**", type="secondary", use_container_width=True):
+                st.session_state.training_in_progress = False
+                st.session_state.training_completed = False
+                st.rerun()
         return
     
     # Show training completed indicator in navigation
@@ -1063,27 +1094,48 @@ def show_analytics():
         st.error(f"Error loading analytics: {str(e)}")
 
 def show_retrain():
+    # Check if training is in progress first - show this prominently
+    if st.session_state.get('training_in_progress', False):
+        st.markdown("""
+        <div style="background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); 
+                    padding: 2rem; border-radius: 15px; color: white; text-align: center; 
+                    margin: 1rem 0; box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);">
+            <h1 style="color: white !important; margin: 0; font-size: 2.5rem;">
+                🚫 TRAINING IN PROGRESS
+            </h1>
+            <p style="color: rgba(255, 255, 255, 0.9) !important; margin: 0.5rem 0 0 0; font-size: 1.3rem;">
+                DO NOT NAVIGATE AWAY OR CLOSE THIS PAGE
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.error("⏳ **TRAINING IN PROGRESS - NAVIGATION DISABLED**")
+        st.info("Please wait while the model is being trained. Navigation is disabled to prevent interruption.")
+        
+        # Show current session info
+        if st.session_state.get('training_session_id'):
+            st.info(f"🔄 **Training Session:** {st.session_state.training_session_id}")
+        
+        # Show progress instructions
+        st.markdown("""
+        ### 📊 Training Progress
+        - The training progress will be shown below
+        - Each epoch will display loss and accuracy metrics
+        - Please be patient and do not refresh the page
+        """)
+        
+        if st.button("🛑 Cancel Training (Will lose progress)", type="secondary"):
+            st.session_state.training_in_progress = False
+            st.session_state.training_completed = False
+            st.rerun()
+        return
+    
     st.markdown("""
     <div class="main-header">
         <h1>🔄 Model Retraining</h1>
         <p>Upload your own data to improve the model</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Show training status if in progress or completed
-    if st.session_state.get('training_in_progress', False):
-        st.error("⏳ **TRAINING IN PROGRESS - DO NOT NAVIGATE AWAY**")
-        st.info("Please wait while the model is being trained. Navigation is disabled to prevent interruption.")
-        
-        # Show current session info
-        if st.session_state.get('training_session_id'):
-            st.info(f"🔄 Training Session: {st.session_state.training_session_id}")
-        
-        if st.button("🛑 Cancel Training", type="secondary"):
-            st.session_state.training_in_progress = False
-            st.session_state.training_completed = False
-            st.rerun()
-        return
     
     # Prominent display for completed training
     if st.session_state.get('training_completed', False) and st.session_state.get('training_results'):
@@ -1365,6 +1417,10 @@ def show_retrain():
             
             if st.form_submit_button(training_button_text, type="primary"):
                 if len(st.session_state.selected_files) >= 5:
+                    # Set training flag immediately to block navigation
+                    st.session_state.training_in_progress = True
+                    st.success("🚀 Training started! Navigation is now blocked.")
+                    time.sleep(1)  # Brief pause to show message
                     start_retraining(st.session_state.selected_files, st.session_state.file_labels, session_name, epochs, clear_user_data)
                 else:
                     st.error("Please select at least 5 images for training.")
@@ -1425,10 +1481,18 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
             st.rerun()
         return
     
-    # Start training
-    st.session_state.training_in_progress = True
+    # Start training - navigation is already blocked from the form submission
     progress_bar = st.progress(0)
     status_text = st.empty()
+    epoch_progress = st.empty()
+    
+    # Debug information
+    st.info(f"🔍 **Debug Info**: Starting training with {len(uploaded_files)} files, {epochs} epochs")
+    for file in uploaded_files:
+        st.write(f"• {file.name} -> {labels.get(file.name, 'Unknown')}")
+    
+    # Show training status
+    st.error("🚫 **TRAINING IN PROGRESS - DO NOT NAVIGATE AWAY**")
     
     try:
         # Reduce epochs for deployed environment to prevent timeout
@@ -1438,7 +1502,12 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         
         if clear_user_data:
             status_text.text("🧹 Clearing previous user data...")
-            st.session_state.db.clear_user_data()
+            try:
+                st.session_state.db.clear_user_data()
+                st.success("✅ User data cleared successfully")
+            except Exception as clear_error:
+                st.error(f"❌ Error clearing user data: {clear_error}")
+                return
             progress_bar.progress(10)
         
         status_text.text("💾 Processing uploaded images...")
@@ -1452,36 +1521,63 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
             'Almirah': 0, 'Chair': 1, 'Fridge': 2, 'Table': 3, 'TV': 4
         }
         
-        for uploaded_file in uploaded_files:
-            file_path = os.path.join(temp_dir, uploaded_file.name)
-            
-            # Reset file position and read content
-            uploaded_file.seek(0)
-            file_content = uploaded_file.read()
-            
-            with open(file_path, 'wb') as f:
-                f.write(file_content)
-            
-            # Reset file position again for potential future use
-            uploaded_file.seek(0)
-            
-            image_paths.append(file_path)
-            class_name = labels[uploaded_file.name]
-            class_names_list.append(class_name)
-            class_ids.append(class_name_to_id[class_name])
+        st.info(f"🔄 Processing {len(uploaded_files)} uploaded files...")
         
-        st.session_state.db.add_user_data(image_paths, class_names_list, class_ids)
+        for i, uploaded_file in enumerate(uploaded_files):
+            try:
+                file_path = os.path.join(temp_dir, uploaded_file.name)
+                
+                # Reset file position and read content
+                uploaded_file.seek(0)
+                file_content = uploaded_file.read()
+                
+                with open(file_path, 'wb') as f:
+                    f.write(file_content)
+                
+                # Reset file position again for potential future use
+                uploaded_file.seek(0)
+                
+                image_paths.append(file_path)
+                class_name = labels[uploaded_file.name]
+                class_names_list.append(class_name)
+                class_ids.append(class_name_to_id[class_name])
+                
+                st.write(f"✅ Processed {uploaded_file.name} -> {class_name}")
+                
+            except Exception as file_error:
+                st.error(f"❌ Error processing {uploaded_file.name}: {file_error}")
+                return
+        
+        st.info(f"🔄 Adding {len(image_paths)} images to database...")
+        try:
+            st.session_state.db.add_user_data(image_paths, class_names_list, class_ids)
+            st.success("✅ Images added to database successfully")
+        except Exception as db_error:
+            st.error(f"❌ Error adding data to database: {db_error}")
+            return
+            
         progress_bar.progress(30)
         
         status_text.text("🔄 Preparing training data...")
-        combined_data = st.session_state.db.get_combined_training_data()
+        try:
+            combined_data = st.session_state.db.get_combined_training_data()
+            st.info(f"🔄 Combined training data: {len(combined_data)} total samples")
+        except Exception as data_error:
+            st.error(f"❌ Error getting combined training data: {data_error}")
+            return
         
-        requirements_met, message = st.session_state.db.check_training_data_requirements()
-        if not requirements_met:
-            st.error(f"❌ Training failed: {message}")
-            progress_bar.progress(0)
-            status_text.text("❌ Training requirements not met!")
-            st.session_state.training_in_progress = False
+        try:
+            requirements_met, message = st.session_state.db.check_training_data_requirements()
+            if not requirements_met:
+                st.error(f"❌ Training failed: {message}")
+                progress_bar.progress(0)
+                status_text.text("❌ Training requirements not met!")
+                st.session_state.training_in_progress = False
+                return
+            else:
+                st.success(f"✅ Training requirements met: {message}")
+        except Exception as req_error:
+            st.error(f"❌ Error checking training requirements: {req_error}")
             return
         
         progress_bar.progress(40)
@@ -1492,8 +1588,11 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         os.makedirs("models", exist_ok=True)
         
         # Add timeout protection for training
-        import time
         start_time = time.time()
+        
+        # Create epoch progress display
+        epoch_tracker = st.empty()
+        epoch_tracker.info("📊 **Training Started:** Initializing model training...")
         
         training_results = st.session_state.trainer.train_model(
             combined_data, 
