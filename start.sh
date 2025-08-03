@@ -20,15 +20,15 @@ python -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} load
 
 # Check if model files exist
 echo "📁 Checking model files..."
-if [ ! -f "models/best_furniture_model_tf215_compatible.h5" ]; then
-    echo "❌ TF 2.15 compatible model file not found!"
+if [ ! -f "models/furniture_model.keras" ]; then
+    echo "❌ .keras model file not found!"
     ls -la models/ || echo "Models directory not found"
     exit 1
 fi
 
 # Check model file size
-MODEL_SIZE=$(stat -c%s "models/best_furniture_model_tf215_compatible.h5")
-echo "✅ TF 2.15 compatible model file found: ${MODEL_SIZE} bytes"
+MODEL_SIZE=$(stat -c%s "models/furniture_model.keras")
+echo "✅ .keras model file found: ${MODEL_SIZE} bytes"
 
 # Check if label encoder exists (after our fix)
 if [ ! -f "models/label_encoder.pkl" ]; then
@@ -57,12 +57,12 @@ except Exception as e:
 print('Testing TensorFlow model loading...')
 try:
     import tensorflow as tf
-    model = tf.keras.models.load_model('models/best_furniture_model_tf215_compatible.h5')
-    print('✅ Model loaded successfully!')
+    model = tf.keras.models.load_model('models/furniture_model.keras')
+    print('✅ .keras model loaded successfully!')
     print(f'Model input shape: {model.input_shape}')
     print(f'Model output shape: {model.output_shape}')
 except Exception as e:
-    print(f'❌ Model loading failed: {e}')
+    print(f'❌ .keras model loading failed: {e}')
     import traceback
     traceback.print_exc()
     sys.exit(1)
