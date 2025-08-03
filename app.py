@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 import os
 import io
+import time
+import traceback
 from datetime import datetime
 import tempfile
 import shutil
@@ -453,21 +455,60 @@ except Exception as e:
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'Home'
 
-# Initialize training state variables
+# Initialize training state variables with persistent keys
 if 'training_in_progress' not in st.session_state:
     st.session_state.training_in_progress = False
 if 'training_completed' not in st.session_state:
     st.session_state.training_completed = False
 if 'training_results' not in st.session_state:
     st.session_state.training_results = None
+if 'last_training_page' not in st.session_state:
+    st.session_state.last_training_page = None
+if 'training_session_id' not in st.session_state:
+    st.session_state.training_session_id = None
 
 # Check if running in deployment environment
+import os
 IS_DEPLOYED = (
     'STREAMLIT_SHARING' in os.environ or 
     'RENDER' in os.environ or 
     'HEROKU' in os.environ or
     'RAILWAY' in os.environ
 )
+
+# Auto-navigate back to retrain page if training was just completed
+if (st.session_state.get('training_completed', False) and 
+    st.session_state.get('last_training_page') == 'Retrain' and 
+    st.session_state.current_page != 'Retrain'):
+    st.session_state.current_page = 'Retrain'
+
+# Recovery mechanism: check for recent training completion from database
+if not st.session_state.get('training_completed', False):
+    try:
+        # Check if there's a recent training session in the database
+        recent_sessions = st.session_state.db.get_all_training_sessions()
+        if recent_sessions and len(recent_sessions['sessions']) > 0:
+            latest_session = recent_sessions['sessions'].iloc[0]  # Most recent session
+            session_time = pd.to_datetime(latest_session['created_at'])
+            current_time = pd.Timestamp.now()
+            
+            # If training was completed within the last 10 minutes, try to recover
+            if (current_time - session_time).total_seconds() < 600:  # 10 minutes
+                st.session_state.training_completed = True
+                st.session_state.training_results = {
+                    'final_accuracy': latest_session['final_accuracy'],
+                    'training_time': latest_session['training_time_minutes'],
+                    'total_data_count': latest_session['total_data_count'],
+                    'session_name': latest_session['session_name'],
+                    'session_id': latest_session['session_name'],
+                    'completed_at': latest_session['created_at']
+                }
+                st.session_state.last_training_page = 'Retrain'
+                if st.session_state.current_page == 'Home':
+                    st.session_state.current_page = 'Retrain'
+    except Exception as recovery_error:
+        # Silently handle recovery errors
+        pass
 
 def navigation():    
     # Initialize session state if not exists
@@ -483,40 +524,50 @@ def navigation():
         st.warning("⏳ Training in progress... Navigation disabled to prevent interruption.")
         return
     
+    # Show training completed indicator in navigation
+    training_indicator = ""
+    if st.session_state.get('training_completed', False):
+        training_indicator = " ✅"
+    
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
         if st.button("🏠 Home", key="nav_home"):
-            # Clear training results when navigating away from retrain page
-            if st.session_state.current_page == 'Retrain':
+            # Only clear training results if explicitly navigating away and training is not just completed
+            if (st.session_state.current_page == 'Retrain' and 
+                not st.session_state.get('training_completed', False)):
                 st.session_state.training_completed = False
                 st.session_state.training_results = None
+                st.session_state.last_training_page = None
             st.session_state.current_page = 'Home'
             st.rerun()
     
     with col2:
         if st.button("🔮 Predict", key="nav_predict"):
-            if st.session_state.current_page == 'Retrain':
+            if (st.session_state.current_page == 'Retrain' and 
+                not st.session_state.get('training_completed', False)):
                 st.session_state.training_completed = False
                 st.session_state.training_results = None
+                st.session_state.last_training_page = None
             st.session_state.current_page = 'Predict'
             st.rerun()
     
     with col3:
         if st.button("📊 Analytics", key="nav_analytics"):
-            if st.session_state.current_page == 'Retrain':
+            if (st.session_state.current_page == 'Retrain' and 
+                not st.session_state.get('training_completed', False)):
                 st.session_state.training_completed = False
                 st.session_state.training_results = None
+                st.session_state.last_training_page = None
             st.session_state.current_page = 'Analytics'
             st.rerun()
     
     with col4:
-        nav_button_text = "🔄 Retrain"
-        if st.session_state.get('training_completed', False):
-            nav_button_text = "🔄 Retrain ✅"
+        nav_button_text = f"🔄 Retrain{training_indicator}"
         
         if st.button(nav_button_text, key="nav_retrain"):
             st.session_state.current_page = 'Retrain'
+            st.session_state.last_training_page = 'Retrain'
             if 'selected_files' not in st.session_state:
                 st.session_state.selected_files = []
                 st.session_state.file_labels = {}
@@ -1021,42 +1072,126 @@ def show_retrain():
     
     # Show training status if in progress or completed
     if st.session_state.get('training_in_progress', False):
-        st.warning("⏳ **Training in Progress**")
-        st.info("Please wait while the model is being trained. Do not navigate away from this page.")
+        st.error("⏳ **TRAINING IN PROGRESS - DO NOT NAVIGATE AWAY**")
+        st.info("Please wait while the model is being trained. Navigation is disabled to prevent interruption.")
+        
+        # Show current session info
+        if st.session_state.get('training_session_id'):
+            st.info(f"🔄 Training Session: {st.session_state.training_session_id}")
+        
         if st.button("🛑 Cancel Training", type="secondary"):
             st.session_state.training_in_progress = False
+            st.session_state.training_completed = False
             st.rerun()
         return
     
+    # Prominent display for completed training
     if st.session_state.get('training_completed', False) and st.session_state.get('training_results'):
-        st.success("🎉 **Training Completed Successfully!**")
+        st.balloons()  # Celebration effect
+        
+        # Large success banner
+        st.markdown("""
+        <div style="background: linear-gradient(90deg, #10b981 0%, #059669 100%); 
+                    padding: 2rem; border-radius: 15px; color: white; text-align: center; 
+                    margin: 1rem 0; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);">
+            <h2 style="color: white !important; margin: 0; font-size: 2rem;">
+                🎉 TRAINING COMPLETED SUCCESSFULLY! 🎉
+            </h2>
+            <p style="color: rgba(255, 255, 255, 0.9) !important; margin: 0.5rem 0 0 0; font-size: 1.2rem;">
+                Your model has been retrained and is ready to use!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         
         results = st.session_state.training_results
-        col1, col2, col3 = st.columns(3)
+        
+        # Training results metrics
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Final Accuracy", f"{results['final_accuracy']:.1%}")
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{results["final_accuracy"]:.1%}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Final Accuracy</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         with col2:
-            st.metric("Training Time", f"{results['training_time']:.1f} min")
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{results["training_time"]:.1f}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Training Time (min)</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         with col3:
-            st.metric("Total Data Used", results['total_data_count'])
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{results["total_data_count"]}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Total Data Used</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        st.info("🔄 **Model Updated!** New predictions will use the retrained model.")
+        with col4:
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{results["session_name"]}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Session Name</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
+        # Action buttons
+        st.markdown("### 🚀 What's Next?")
+        col1, col2, col3 = st.columns(3)
+        
         with col1:
-            if st.button("🆕 Start New Training Session", type="primary"):
+            if st.button("🔮 **Test New Model**", type="primary", use_container_width=True):
+                st.session_state.current_page = 'Predict'
+                st.rerun()
+        
+        with col2:
+            if st.button("📊 **View Analytics**", type="secondary", use_container_width=True):
+                st.session_state.current_page = 'Analytics'
+                st.rerun()
+        
+        with col3:
+            if st.button("🆕 **New Training Session**", type="secondary", use_container_width=True):
+                # Clear training state for new session
                 st.session_state.training_completed = False
                 st.session_state.training_results = None
+                st.session_state.training_session_id = None
+                st.session_state.last_training_page = None
                 st.session_state.selected_files = []
                 st.session_state.file_labels = {}
                 st.rerun()
         
-        with col2:
-            if st.button("🔮 Test Model", type="secondary"):
-                st.session_state.current_page = 'Predict'
-                st.rerun()
+        # Show session persistence info
+        if results.get('completed_at'):
+            st.info(f"🕐 Training completed at: {results['completed_at']}")
         
         st.markdown("---")
+        st.markdown("### 📝 Training Session Details")
+        
+        # Display training session info
+        session_info = {
+            "Session ID": results.get('session_id', 'N/A'),
+            "Session Name": results.get('session_name', 'N/A'),
+            "Final Accuracy": f"{results['final_accuracy']:.2%}",
+            "Training Duration": f"{results['training_time']:.2f} minutes",
+            "Total Training Data": f"{results['total_data_count']} images",
+            "Completed At": results.get('completed_at', 'N/A')
+        }
+        
+        for key, value in session_info.items():
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.markdown(f"**{key}:**")
+            with col2:
+                st.markdown(value)
+        
+        # Clear results button
+        st.markdown("---")
+        if st.button("�️ Clear Results and Start Fresh", type="secondary"):
+            st.session_state.training_completed = False
+            st.session_state.training_results = None
+            st.session_state.training_session_id = None
+            st.session_state.last_training_page = None
+            st.session_state.selected_files = []
+            st.session_state.file_labels = {}
+            st.rerun()
+        
+        return  # Don't show the upload interface when results are displayed
     
     st.markdown("### 📤 Upload Training Images")
     st.markdown("""
@@ -1397,23 +1532,38 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         except Exception as pred_error:
             st.warning(f"Warning: Could not update predictor: {pred_error}")
         
-        # Store results in session state
+        # Store results in session state with unique identifier
+        training_session_id = f"{session_name}_{int(time.time())}"
+        st.session_state.training_session_id = training_session_id
         st.session_state.training_results = {
             'final_accuracy': training_results['final_accuracy'],
             'training_time': training_results['training_time'],
             'total_data_count': len(combined_data),
-            'session_name': session_name
+            'session_name': session_name,
+            'session_id': training_session_id,
+            'completed_at': datetime.now().isoformat()
         }
         
         progress_bar.progress(100)
         status_text.text("✅ Training completed successfully!")
         
-        # Mark training as completed
+        # Mark training as completed and ensure we stay on retrain page
         st.session_state.training_completed = True
         st.session_state.training_in_progress = False
+        st.session_state.last_training_page = 'Retrain'
+        st.session_state.current_page = 'Retrain'  # Force stay on retrain page
+        
+        # Clear the uploaded files after successful training
+        st.session_state.selected_files = []
+        st.session_state.file_labels = {}
+        
+        # Add a delay to ensure session state is properly saved
+        time.sleep(2)
+        
+        # Success message before rerun
+        st.success("🎉 Training completed! Results will be displayed...")
         
         # Force rerun to show results
-        time.sleep(1)  # Brief pause to ensure state is saved
         st.rerun()
         
     except Exception as e:
