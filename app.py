@@ -412,70 +412,11 @@ st.markdown("""
         color: white !important;
     }
     
-        .stButton button:contains("Clear All"):hover {
+    .stButton button:contains("Clear All"):hover {
         background: #4b5563 !important;
     }
-    
-    /* Additional dropdown styling for better visibility */
-    .stSelectbox div[data-baseweb="popover"] {
-        background-color: white !important;
-    }
-    
-    .stSelectbox div[data-baseweb="popover"] div[role="listbox"] {
-        background-color: white !important;
-        border: 2px solid #8B6EFF !important;
-        border-radius: 8px !important;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
-    }
-    
-    .stSelectbox div[data-baseweb="popover"] div[role="option"] {
-        background-color: white !important;
-        color: #333333 !important;
-        padding: 0.75rem 1rem !important;
-        font-weight: 500 !important;
-    }
-    
-    .stSelectbox div[data-baseweb="popover"] div[role="option"]:hover {
-        background-color: #f8f9fa !important;
-        color: #333333 !important;
-    }
-    
-    .stSelectbox div[data-baseweb="popover"] div[role="option"][aria-selected="true"] {
-        background-color: #8B6EFF !important;
-        color: white !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Ensure dropdown content is always visible */
-    .stSelectbox [data-baseweb="select"] {
-        background-color: white !important;
-        color: #333333 !important;
-    }
-    
-    .stSelectbox [data-baseweb="select"] span {
-        color: #333333 !important;
-    }
-    
-    /* Force visibility for all dropdown elements */
-    div[data-baseweb="popover"] * {
-        color: #333333 !important;
-    }
-    
-    div[data-baseweb="popover"] div[role="option"] {
-        background-color: white !important;
-        color: #333333 !important;
-    }
-    
-    div[data-baseweb="popover"] div[role="option"]:hover {
-        background-color: #f8f9fa !important;
-        color: #333333 !important;
-    }
-    
-    div[data-baseweb="popover"] div[role="option"][aria-selected="true"] {
-        background-color: #8B6EFF !important;
-        color: white !important;
-    }
-</style>""", unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize predictor
 print("🔄 Initializing predictor...")
@@ -648,94 +589,95 @@ def show_predict():
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
                     image.save(tmp_file.name, 'JPEG')
                     temp_path = tmp_file.name
-                
-                if st.button("🔍 Classify Image", type="primary"):
-                    with st.spinner("Analyzing image..."):
-                        try:
-                            result = st.session_state.predictor.predict_image(temp_path)
-                            
-                            if result:
-                                st.session_state.db.log_prediction(
-                                    image_path=uploaded_file.name,
-                                    predicted_class=result['predicted_class'],
-                                    confidence=result['confidence']
-                                )
-                                
-                                with col2:
-                                    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-                                    st.markdown("### 🎯 Predicted Result")
-                                    st.markdown(f'<div class="predicted-class">{result["predicted_class"]}</div>', unsafe_allow_html=True)
-                                    st.markdown(f'<div class="confidence-score">Confidence: {result["confidence"]:.1%}</div>', unsafe_allow_html=True)
-                                    st.markdown('</div>', unsafe_allow_html=True)
-                                    
-                                    st.markdown("### 📊 Probability Breakdown")
-                                    prob_data = []
-                                    for i, class_name in enumerate(result['class_names']):
-                                        prob_data.append({
-                                            'Category': class_name,
-                                            'Probability': result['all_predictions'][i]
-                                        })
-                                    
-                                    prob_df = pd.DataFrame(prob_data)
-                                    fig = px.bar(
-                                        prob_df,
-                                        x='Probability',
-                                        y='Category',
-                                        orientation='h',
-                                        color='Probability',
-                                        color_continuous_scale=['#e5e5e5', '#8B6EFF']
-                                    )
-                                    fig.update_layout(
-                                        showlegend=False,
-                                        height=300,
-                                        margin=dict(t=20, b=20, l=20, r=20)
-                                    )
-                                    st.plotly_chart(fig, use_container_width=True)
-                            else:
-                                st.error("❌ Failed to classify image. Please try again.")
-                                
-                                # Show debug info in development
-                                with st.expander("🔍 Debug Information"):
-                                    st.write("**Possible causes:**")
-                                    st.write("- Model or label encoder loading issue")
-                                    st.write("- Image preprocessing error") 
-                                    st.write("- TensorFlow/prediction error")
-                                    st.write("- File path or permissions issue")
-                                    
-                                    st.write("**Model status:**")
-                                    if hasattr(st.session_state, 'predictor'):
-                                        st.write(f"- Model loaded: {st.session_state.predictor.model is not None}")
-                                        st.write(f"- Label encoder loaded: {st.session_state.predictor.label_encoder is not None}")
-                                        if st.session_state.predictor.label_encoder:
-                                            st.write(f"- Label encoder classes: {list(st.session_state.predictor.label_encoder.classes_)}")
-                        
-                        except Exception as e:
-                            st.error(f"❌ Prediction Error: {str(e)}")
-                            
-                            # Show debug info
-                            with st.expander("🔍 Error Details"):
-                                import traceback
-                                st.code(traceback.format_exc())
-                                
-                                st.write("**System Information:**")
-                                try:
-                                    import tensorflow as tf
-                                    st.write(f"- TensorFlow version: {tf.__version__}")
-                                except:
-                                    st.write("- TensorFlow: Not available")
-                                
-                                st.write(f"- Python version: {os.sys.version}")
-                                st.write(f"- Image path exists: {os.path.exists(temp_path) if 'temp_path' in locals() else 'Unknown'}")
-                                
-                            st.info("💡 **Tip**: Try uploading a different image or refresh the page to reload the model.")
-                        
-                        finally:
-                            if os.path.exists(temp_path):
-                                os.unlink(temp_path)
             
             except Exception as e:
                 st.error(f"Error loading image: {str(e)}")
                 st.info("Please try uploading a different image file.")
+                return
+            
+            if st.button("🔍 Classify Image", type="primary"):
+                with st.spinner("Analyzing image..."):
+                    try:
+                        result = st.session_state.predictor.predict_image(temp_path)
+                        
+                        if result:
+                            st.session_state.db.log_prediction(
+                                image_path=uploaded_file.name,
+                                predicted_class=result['predicted_class'],
+                                confidence=result['confidence']
+                            )
+                            
+                            with col2:
+                                st.markdown('<div class="result-card">', unsafe_allow_html=True)
+                                st.markdown("### 🎯 Predicted Result")
+                                st.markdown(f'<div class="predicted-class">{result["predicted_class"]}</div>', unsafe_allow_html=True)
+                                st.markdown(f'<div class="confidence-score">Confidence: {result["confidence"]:.1%}</div>', unsafe_allow_html=True)
+                                st.markdown('</div>', unsafe_allow_html=True)
+                                
+                                st.markdown("### 📊 Probability Breakdown")
+                                prob_data = []
+                                for i, class_name in enumerate(result['class_names']):
+                                    prob_data.append({
+                                        'Category': class_name,
+                                        'Probability': result['all_predictions'][i]
+                                    })
+                                
+                                prob_df = pd.DataFrame(prob_data)
+                                fig = px.bar(
+                                    prob_df,
+                                    x='Probability',
+                                    y='Category',
+                                    orientation='h',
+                                    color='Probability',
+                                    color_continuous_scale=['#e5e5e5', '#8B6EFF']
+                                )
+                                fig.update_layout(
+                                    showlegend=False,
+                                    height=300,
+                                    margin=dict(t=20, b=20, l=20, r=20)
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.error("❌ Failed to classify image. Please try again.")
+                            
+                            # Show debug info in development
+                            with st.expander("🔍 Debug Information"):
+                                st.write("**Possible causes:**")
+                                st.write("- Model or label encoder loading issue")
+                                st.write("- Image preprocessing error") 
+                                st.write("- TensorFlow/prediction error")
+                                st.write("- File path or permissions issue")
+                                
+                                st.write("**Model status:**")
+                                if hasattr(st.session_state, 'predictor'):
+                                    st.write(f"- Model loaded: {st.session_state.predictor.model is not None}")
+                                    st.write(f"- Label encoder loaded: {st.session_state.predictor.label_encoder is not None}")
+                                    if st.session_state.predictor.label_encoder:
+                                        st.write(f"- Label encoder classes: {list(st.session_state.predictor.label_encoder.classes_)}")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Prediction Error: {str(e)}")
+                        
+                        # Show debug info
+                        with st.expander("🔍 Error Details"):
+                            import traceback
+                            st.code(traceback.format_exc())
+                            
+                            st.write("**System Information:**")
+                            try:
+                                import tensorflow as tf
+                                st.write(f"- TensorFlow version: {tf.__version__}")
+                            except:
+                                st.write("- TensorFlow: Not available")
+                            
+                            st.write(f"- Python version: {os.sys.version}")
+                            st.write(f"- Image path exists: {os.path.exists(temp_path) if 'temp_path' in locals() else 'Unknown'}")
+                            
+                        st.info("💡 **Tip**: Try uploading a different image or refresh the page to reload the model.")
+                    
+                    finally:
+                        if os.path.exists(temp_path):
+                            os.unlink(temp_path)
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1055,8 +997,11 @@ def show_retrain():
         )
         
         if uploaded_files:
+            # Get current file names to avoid duplicates
+            current_file_names = [f.name for f in st.session_state.selected_files]
+            
             for file in uploaded_files:
-                if file.name not in [f.name for f in st.session_state.selected_files]:
+                if file.name not in current_file_names:
                     st.session_state.selected_files.append(file)
                     st.session_state.file_labels[file.name] = 'Chair'
         
@@ -1080,14 +1025,18 @@ def show_retrain():
                         st.image(image, caption=selected_file.name[:15], width=120)
                         
                         if st.button("❌ Remove", key=f"remove_{selected_file.name}_{i}"):
-                            files_to_remove.append(selected_file)
-                            if selected_file.name in st.session_state.file_labels:
-                                del st.session_state.file_labels[selected_file.name]
+                            files_to_remove.append(i)  # Store index instead of file object
                     except Exception as e:
                         st.error(f"Error loading {selected_file.name}: {str(e)}")
             
-            for file_to_remove in files_to_remove:
-                st.session_state.selected_files.remove(file_to_remove)
+            # Remove files by index (in reverse order to maintain correct indices)
+            if files_to_remove:
+                for index in sorted(files_to_remove, reverse=True):
+                    if index < len(st.session_state.selected_files):
+                        file_to_remove = st.session_state.selected_files[index]
+                        if file_to_remove.name in st.session_state.file_labels:
+                            del st.session_state.file_labels[file_to_remove.name]
+                        st.session_state.selected_files.pop(index)
                 st.rerun()
             
             if len(st.session_state.selected_files) > num_cols:
