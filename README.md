@@ -449,5 +449,5 @@ export MODEL_PATH=models/
 
 **Project Status**: Active Development  
 **License**: MIT  
-**Maintainer**: [Your Name]  
-**Contact**: [Your Email]
+**Maintainer**: Placide Imanzi Kabisa
+**Contact**: imanzikabisa@gmail.com
