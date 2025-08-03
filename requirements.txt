@@ -1,8 +1,8 @@
 # Requirements for Railway deployment with Python 3.10
-# Updated TensorFlow version to match local development
+# Using stable TensorFlow 2.15.0 for better compatibility
 
 streamlit==1.28.1
-tensorflow==2.19.0
+tensorflow==2.15.0
 scikit-learn==1.3.2
 pandas==2.1.4
 numpy==1.24.4

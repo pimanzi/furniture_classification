@@ -317,66 +317,85 @@ class FurniturePredictor:
             else:
                 print(f"❌ Models directory does not exist: {models_dir}")
             
-            if not os.path.exists(self.model_path):
-                print(f"❌ Model file not found at {self.model_path}")
-                print("Please train a model first using the Retrain section.")
-                return False
-                
             print(f"📸 Loading model from: {self.model_path}")
             
             # Try multiple loading strategies for compatibility
             model_loaded = False
             
-            # Strategy 1: Standard loading
-            try:
-                self.model = tf.keras.models.load_model(self.model_path)
-                model_loaded = True
-                print(f"✓ Model loaded successfully with standard method")
-            except Exception as e1:
-                print(f"⚠️ Standard loading failed: {str(e1)}")
-                
-                # Strategy 2: Load with compile=False
+            # Strategy 1: Try SavedModel format first (most compatible)
+            savedmodel_path = os.path.join(os.path.dirname(self.model_path), 'furniture_model_savedmodel')
+            if os.path.exists(savedmodel_path):
                 try:
-                    self.model = tf.keras.models.load_model(self.model_path, compile=False)
-                    model_loaded = True
-                    print(f"✓ Model loaded successfully with compile=False")
-                except Exception as e2:
-                    print(f"⚠️ Loading with compile=False failed: {str(e2)}")
+                    print(f"� Trying SavedModel format: {savedmodel_path}")
                     
-                    # Strategy 3: Try SavedModel format with TFSMLayer (Keras 3 compatible)
-                    savedmodel_path = os.path.join(os.path.dirname(self.model_path), 'furniture_model_savedmodel')
-                    if os.path.exists(savedmodel_path):
+                    # For TensorFlow 2.15.0 compatibility, use tf.saved_model.load first
+                    try:
+                        # Try standard loading
+                        self.model = tf.keras.models.load_model(savedmodel_path)
+                        model_loaded = True
+                        print(f"✓ SavedModel loaded successfully with standard method")
+                    except:
+                        # Try with tf.saved_model.load for older TF versions
                         try:
-                            print(f"🔄 Trying SavedModel with TFSMLayer: {savedmodel_path}")
-                            # Create a wrapper model using TFSMLayer
-                            tfsm_layer = tf.keras.layers.TFSMLayer(savedmodel_path, call_endpoint='serve')
+                            import tensorflow as tf
+                            loaded = tf.saved_model.load(savedmodel_path)
                             
-                            # Create a simple model wrapper
-                            inputs = tf.keras.Input(shape=(224, 224, 3))
-                            outputs = tfsm_layer(inputs)
-                            self.model = tf.keras.Model(inputs=inputs, outputs=outputs)
+                            # Create a wrapper function for inference
+                            def predict_function(x):
+                                return loaded.signatures['serving_default'](tf.convert_to_tensor(x))['output_0']
                             
+                            # Create a minimal wrapper class
+                            class SavedModelWrapper:
+                                def __init__(self, predict_fn):
+                                    self._predict_fn = predict_fn
+                                
+                                def predict(self, x, verbose=0):
+                                    if len(x.shape) == 3:
+                                        x = np.expand_dims(x, axis=0)
+                                    return self._predict_fn(x.astype(np.float32)).numpy()
+                            
+                            self.model = SavedModelWrapper(predict_function)
                             model_loaded = True
-                            print(f"✓ SavedModel loaded successfully with TFSMLayer")
+                            print(f"✓ SavedModel loaded with tf.saved_model.load wrapper")
                         except Exception as e3:
-                            print(f"⚠️ SavedModel with TFSMLayer failed: {str(e3)}")
+                            print(f"⚠️ SavedModel tf.saved_model.load failed: {str(e3)}")
+                            
+                except Exception as e1:
+                    print(f"⚠️ SavedModel loading failed: {str(e1)}")
+            
+            # Strategy 2: Standard H5 loading
+            if not model_loaded and os.path.exists(self.model_path):
+                try:
+                    self.model = tf.keras.models.load_model(self.model_path)
+                    model_loaded = True
+                    print(f"✓ H5 model loaded successfully with standard method")
+                except Exception as e2:
+                    print(f"⚠️ Standard H5 loading failed: {str(e2)}")
                     
-                    # Strategy 4: Try the alternative H5 model
-                    if not model_loaded:
-                        alt_model_path = os.path.join(os.path.dirname(self.model_path), 'Training_0802_pax.h5')
-                        if os.path.exists(alt_model_path):
-                            try:
-                                print(f"🔄 Trying alternative H5 model: {alt_model_path}")
-                                self.model = tf.keras.models.load_model(alt_model_path)
-                                model_loaded = True
-                                print(f"✓ Alternative H5 model loaded successfully")
-                                # Update label encoder path to match
-                                alt_le_path = os.path.join(os.path.dirname(self.label_encoder_path), 'Training_0802_pax_label_encoder.pkl')
-                                if os.path.exists(alt_le_path):
-                                    self.label_encoder_path = alt_le_path
-                                    print(f"✓ Updated label encoder path to: {alt_le_path}")
-                            except Exception as e4:
-                                print(f"⚠️ Alternative H5 model loading failed: {str(e4)}")
+                    # Strategy 3: H5 with compile=False
+                    try:
+                        self.model = tf.keras.models.load_model(self.model_path, compile=False)
+                        model_loaded = True
+                        print(f"✓ H5 model loaded successfully with compile=False")
+                    except Exception as e3:
+                        print(f"⚠️ H5 loading with compile=False failed: {str(e3)}")
+            
+            # Strategy 4: Try alternative H5 model
+            if not model_loaded:
+                alt_model_path = os.path.join(os.path.dirname(self.model_path), 'Training_0802_pax.h5')
+                if os.path.exists(alt_model_path):
+                    try:
+                        print(f"🔄 Trying alternative H5 model: {alt_model_path}")
+                        self.model = tf.keras.models.load_model(alt_model_path)
+                        model_loaded = True
+                        print(f"✓ Alternative H5 model loaded successfully")
+                        # Update label encoder path to match
+                        alt_le_path = os.path.join(os.path.dirname(self.label_encoder_path), 'Training_0802_pax_label_encoder.pkl')
+                        if os.path.exists(alt_le_path):
+                            self.label_encoder_path = alt_le_path
+                            print(f"✓ Updated label encoder path to: {alt_le_path}")
+                    except Exception as e4:
+                        print(f"⚠️ Alternative H5 model loading failed: {str(e4)}")
             
             if not model_loaded:
                 print(f"❌ All model loading strategies failed")
