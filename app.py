@@ -436,6 +436,19 @@ except Exception as e:
     print(f"❌ Predictor initialization error: {e}")
     st.error(f"Predictor initialization failed: {e}")
 
+# Initialize trainer
+print("🔄 Initializing trainer...")
+try:
+    if 'trainer' not in st.session_state:
+        print("Creating new FurnitureModelTrainer instance...")
+        st.session_state.trainer = FurnitureModelTrainer()
+        print("✓ Trainer initialized successfully")
+    else:
+        print("✓ Using existing trainer instance")
+except Exception as e:
+    print(f"❌ Trainer initialization error: {e}")
+    st.error(f"Trainer initialization failed: {e}")
+
 # Initialize session state
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'Home'
@@ -1020,7 +1033,13 @@ def show_retrain():
                 col_idx = i % num_cols
                 with cols[col_idx]:
                     try:
-                        image = Image.open(selected_file)
+                        # Read the uploaded file content properly
+                        image_bytes = selected_file.read()
+                        image = Image.open(io.BytesIO(image_bytes))
+                        
+                        # Reset file position for later use
+                        selected_file.seek(0)
+                        
                         image.thumbnail((120, 120), Image.Resampling.LANCZOS)
                         st.image(image, caption=selected_file.name[:15], width=120)
                         
@@ -1097,7 +1116,13 @@ def show_retrain():
                 
                 with col1:
                     try:
-                        image = Image.open(selected_file)
+                        # Read the uploaded file content properly
+                        image_bytes = selected_file.read()
+                        image = Image.open(io.BytesIO(image_bytes))
+                        
+                        # Reset file position for later use
+                        selected_file.seek(0)
+                        
                         image.thumbnail((100, 100), Image.Resampling.LANCZOS)
                         st.image(image, width=100)
                     except Exception as e:
@@ -1162,8 +1187,16 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         
         for uploaded_file in uploaded_files:
             file_path = os.path.join(temp_dir, uploaded_file.name)
+            
+            # Reset file position and read content
+            uploaded_file.seek(0)
+            file_content = uploaded_file.read()
+            
             with open(file_path, 'wb') as f:
-                f.write(uploaded_file.getbuffer())
+                f.write(file_content)
+            
+            # Reset file position again for potential future use
+            uploaded_file.seek(0)
             
             image_paths.append(file_path)
             class_name = labels[uploaded_file.name]
@@ -1230,7 +1263,6 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
             st.metric("Total Data Used", len(combined_data))
         
         # Create new predictor instance for retrained model
-        from src.utils.model_utils import FurniturePredictor
         st.session_state.predictor = FurniturePredictor(
             model_path=model_save_path,
             label_encoder_path=model_save_path.replace('.h5', '_label_encoder.pkl')
