@@ -74,7 +74,7 @@ def create_performance_dashboard():
     locust_df = load_locust_data()
     
     if performance_df is None and locust_df is None:
-        st.error("❌ No load testing data found. Please run load tests first.")
+        st.error(" No load testing data found. Please run load tests first.")
         st.info("💡 Run `./load_testing/run_load_tests.sh` to generate test data")
         return
     
@@ -95,7 +95,7 @@ def create_performance_dashboard():
     
     with col1:
         if performance_df is not None:
-            st.subheader("🖥️ System Performance")
+            st.subheader("🖥 System Performance")
             
             # CPU and Memory Usage
             fig_system = make_subplots(

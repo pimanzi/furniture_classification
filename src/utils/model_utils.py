@@ -14,10 +14,10 @@ try:
     from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
     from tensorflow.keras.preprocessing.image import load_img, img_to_array, ImageDataGenerator
     from tensorflow.keras.utils import to_categorical
-    print("✓ TensorFlow loaded successfully")
+    print("TensorFlow loaded successfully")
     TENSORFLOW_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ TensorFlow not available: {e}")
+    print(f"TensorFlow not available: {e}")
     TENSORFLOW_AVAILABLE = False
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -294,11 +294,11 @@ class FurniturePredictor:
         self.class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
         self.img_size = 224
         
-        print(f"🔍 Model path: {self.model_path}")
-        print(f"🔍 Label encoder path: {self.label_encoder_path}")
-        print(f"🔍 Current working directory: {base_dir}")
-        print(f"🔍 Model file exists: {os.path.exists(self.model_path)}")
-        print(f"🔍 Label encoder file exists: {os.path.exists(self.label_encoder_path)}")
+        print(f"Model path: {self.model_path}")
+        print(f"Label encoder path: {self.label_encoder_path}")
+        print(f"Current working directory: {base_dir}")
+        print(f"Model file exists: {os.path.exists(self.model_path)}")
+        print(f"Label encoder file exists: {os.path.exists(self.label_encoder_path)}")
         
     def load_model(self):
         """Load the trained model and label encoder"""
@@ -306,18 +306,18 @@ class FurniturePredictor:
             # Debug: List all files in models directory
             models_dir = os.path.dirname(self.model_path)
             if os.path.exists(models_dir):
-                print(f"📁 Files in {models_dir}:")
+                print(f"Files in {models_dir}:")
                 for file in os.listdir(models_dir):
                     full_path = os.path.join(models_dir, file)
                     if os.path.isfile(full_path):
                         size = os.path.getsize(full_path)
-                        print(f"  📄 {file} ({size:,} bytes)")
+                        print(f"  {file} ({size:,} bytes)")
                     else:
-                        print(f"  📁 {file}/")
+                        print(f"  {file}/")
             else:
-                print(f"❌ Models directory does not exist: {models_dir}")
+                print(f"Models directory does not exist: {models_dir}")
             
-            print(f"📸 Loading model from: {self.model_path}")
+            print(f"Loading model from: {self.model_path}")
             
             # Try multiple loading strategies for compatibility
             model_loaded = False
@@ -333,7 +333,7 @@ class FurniturePredictor:
                         # Try standard loading
                         self.model = tf.keras.models.load_model(savedmodel_path)
                         model_loaded = True
-                        print(f"✓ SavedModel loaded successfully with standard method")
+                        print(f"Successfully SavedModel loaded successfully with standard method")
                     except:
                         # Try with tf.saved_model.load for older TF versions
                         try:
@@ -356,49 +356,49 @@ class FurniturePredictor:
                             
                             self.model = SavedModelWrapper(predict_function)
                             model_loaded = True
-                            print(f"✓ SavedModel loaded with tf.saved_model.load wrapper")
+                            print(f"Successfully SavedModel loaded with tf.saved_model.load wrapper")
                         except Exception as e3:
-                            print(f"⚠️ SavedModel tf.saved_model.load failed: {str(e3)}")
+                            print(f"Warning: SavedModel tf.saved_model.load failed: {str(e3)}")
                             
                 except Exception as e1:
-                    print(f"⚠️ SavedModel loading failed: {str(e1)}")
+                    print(f"Warning: SavedModel loading failed: {str(e1)}")
             
             # Strategy 2: Standard H5 loading
             if not model_loaded and os.path.exists(self.model_path):
                 try:
                     self.model = tf.keras.models.load_model(self.model_path)
                     model_loaded = True
-                    print(f"✓ H5 model loaded successfully with standard method")
+                    print(f"Successfully H5 model loaded successfully with standard method")
                 except Exception as e2:
-                    print(f"⚠️ Standard H5 loading failed: {str(e2)}")
+                    print(f"Warning: Standard H5 loading failed: {str(e2)}")
                     
                     # Strategy 3: H5 with compile=False
                     try:
                         self.model = tf.keras.models.load_model(self.model_path, compile=False)
                         model_loaded = True
-                        print(f"✓ H5 model loaded successfully with compile=False")
+                        print(f"Successfully H5 model loaded successfully with compile=False")
                     except Exception as e3:
-                        print(f"⚠️ H5 loading with compile=False failed: {str(e3)}")
+                        print(f"Warning: H5 loading with compile=False failed: {str(e3)}")
             
             # Strategy 4: Try alternative H5 model
             if not model_loaded:
                 alt_model_path = os.path.join(os.path.dirname(self.model_path), 'Training_0802_pax.h5')
                 if os.path.exists(alt_model_path):
                     try:
-                        print(f"🔄 Trying alternative H5 model: {alt_model_path}")
+                        print(f"Trying Trying alternative H5 model: {alt_model_path}")
                         self.model = tf.keras.models.load_model(alt_model_path)
                         model_loaded = True
-                        print(f"✓ Alternative H5 model loaded successfully")
+                        print(f"Successfully Alternative H5 model loaded successfully")
                         # Update label encoder path to match
                         alt_le_path = os.path.join(os.path.dirname(self.label_encoder_path), 'Training_0802_pax_label_encoder.pkl')
                         if os.path.exists(alt_le_path):
                             self.label_encoder_path = alt_le_path
-                            print(f"✓ Updated label encoder path to: {alt_le_path}")
+                            print(f"Successfully Updated label encoder path to: {alt_le_path}")
                     except Exception as e4:
-                        print(f"⚠️ Alternative H5 model loading failed: {str(e4)}")
+                        print(f"Warning: Alternative H5 model loading failed: {str(e4)}")
             
             if not model_loaded:
-                print(f"❌ All model loading strategies failed")
+                print(f"Error: All model loading strategies failed")
                 return False
             
             # Try to load label encoder with fallback
@@ -407,7 +407,7 @@ class FurniturePredictor:
                 try:
                     with open(self.label_encoder_path, 'rb') as f:
                         self.label_encoder = pickle.load(f)
-                    print(f"✓ Label encoder loaded from {self.label_encoder_path}")
+                    print(f"Successfully Label encoder loaded from {self.label_encoder_path}")
                     print(f"Label encoder classes: {list(self.label_encoder.classes_)}")
                     
                     # Verify the label encoder has the expected classes
@@ -415,14 +415,14 @@ class FurniturePredictor:
                     actual_classes = set(str(cls) for cls in self.label_encoder.classes_)
                     
                     if expected_classes != actual_classes:
-                        print(f"⚠️ Label encoder class mismatch!")
+                        print(f"Warning: Label encoder class mismatch!")
                         print(f"Expected: {self.class_names}")
                         print(f"Actual: {list(self.label_encoder.classes_)}")
                         print("Creating fallback encoder...")
                         self.label_encoder = self._create_fallback_encoder()
                         
                 except Exception as le_error:
-                    print(f"⚠️ Error loading label encoder: {str(le_error)}")
+                    print(f"Warning: Error loading label encoder: {str(le_error)}")
                     print("Creating fallback encoder...")
                     self.label_encoder = self._create_fallback_encoder()
             else:
@@ -443,25 +443,25 @@ class FurniturePredictor:
         fallback_encoder = LabelEncoder()
         # Manually set the classes in the correct order
         fallback_encoder.classes_ = np.array(self.class_names, dtype=object)
-        print(f"✓ Fallback encoder created with classes: {self.class_names}")
+        print(f"Successfully Fallback encoder created with classes: {self.class_names}")
         return fallback_encoder
     
     def predict_image(self, image_path):
         """Make prediction on a single image"""
         if self.model is None:
             if not self.load_model():
-                print("❌ Failed to load model")
+                print("Error: Failed to load model")
                 return None
         
         try:
             # Load and preprocess image
-            print(f"📸 Loading image: {image_path}")
+            print(f"Loading Loading image: {image_path}")
             img = load_img(image_path, target_size=(self.img_size, self.img_size))
             img_array = img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0)
             img_array = img_array / 255.0
             
-            print(f"🔍 Making prediction...")
+            print(f" Making prediction...")
             
             # Make prediction with regular Keras model
             predictions = self.model.predict(img_array, verbose=0)
@@ -469,23 +469,23 @@ class FurniturePredictor:
             confidence = np.max(predictions[0])
             predicted_class_idx = np.argmax(predictions[0])
             
-            print(f"🎯 Raw prediction index: {predicted_class_idx}")
-            print(f"🎯 Confidence: {confidence:.3f}")
+            print(f"Prediction Raw prediction index: {predicted_class_idx}")
+            print(f"Prediction Confidence: {confidence:.3f}")
             
             # Get class name with robust error handling
             try:
                 if self.label_encoder is not None:
                     if hasattr(self.label_encoder, 'classes_') and len(self.label_encoder.classes_) > predicted_class_idx:
                         predicted_class = str(self.label_encoder.classes_[predicted_class_idx])
-                        print(f"✓ Using label encoder: {predicted_class}")
+                        print(f"Successfully Using label encoder: {predicted_class}")
                     else:
-                        print("⚠️ Label encoder classes_ issue, using default")
+                        print("Warning: Label encoder classes_ issue, using default")
                         predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
                 else:
-                    print("⚠️ No label encoder, using default class names")
+                    print("Warning: No label encoder, using default class names")
                     predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
             except Exception as class_error:
-                print(f"❌ Error getting class name: {str(class_error)}")
+                print(f"Error: Error getting class name: {str(class_error)}")
                 predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
             
             result = {
@@ -499,7 +499,7 @@ class FurniturePredictor:
             return result
             
         except Exception as e:
-            print(f"❌ Error making prediction: {str(e)}")
+            print(f"Error: Error making prediction: {str(e)}")
             import traceback
             print("Full traceback:")
             traceback.print_exc()

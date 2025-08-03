@@ -90,7 +90,7 @@ class PerformanceMonitor:
                 'streamlit_process_count': len(streamlit_processes)
             }
         except Exception as e:
-            print(f"⚠️ Error collecting system metrics: {e}")
+            print(f" Error collecting system metrics: {e}")
             return None
     
     def test_app_response(self):
@@ -125,9 +125,9 @@ class PerformanceMonitor:
     
     def monitor_performance(self):
         """Main monitoring loop."""
-        print(f"🔍 Starting performance monitoring...")
+        print(f" Starting performance monitoring...")
         print(f"📊 Monitoring URL: {self.app_url}")
-        print(f"⏱️ Sampling interval: {self.interval} seconds")
+        print(f"⏱ Sampling interval: {self.interval} seconds")
         print("📈 Metrics: CPU, Memory, Disk I/O, Network I/O, App Response Time")
         print("🔴 Press Ctrl+C to stop monitoring")
         print("=" * 60)
@@ -155,16 +155,16 @@ class PerformanceMonitor:
                     cpu = combined_metrics['cpu_percent']
                     memory = combined_metrics['memory_percent']
                     response_time = combined_metrics['response_time_ms']
-                    status = "✅" if combined_metrics['app_available'] else "❌"
+                    status = "✅" if combined_metrics['app_available'] else ""
                     streamlit_cpu = combined_metrics['streamlit_cpu_percent']
                     
                     print(f"{elapsed:<8} {cpu:<6.1f} {memory:<6.1f} {response_time:<8.1f} {status:<8} {streamlit_cpu:<12.1f}")
                     
                     # Alert on high metrics
                     if cpu > 80:
-                        print(f"⚠️ HIGH CPU: {cpu:.1f}%")
+                        print(f" HIGH CPU: {cpu:.1f}%")
                     if memory > 80:
-                        print(f"⚠️ HIGH MEMORY: {memory:.1f}%")
+                        print(f" HIGH MEMORY: {memory:.1f}%")
                     if response_time > 5000:
                         print(f"🐌 SLOW RESPONSE: {response_time:.1f}ms")
                     if not combined_metrics['app_available']:
@@ -175,7 +175,7 @@ class PerformanceMonitor:
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                print(f"❌ Monitoring error: {e}")
+                print(f" Monitoring error: {e}")
                 time.sleep(self.interval)
         
         self.stop_monitoring()
@@ -185,7 +185,7 @@ class PerformanceMonitor:
         self.monitoring = False
         
         if not self.metrics:
-            print("⚠️ No metrics collected")
+            print(" No metrics collected")
             return
         
         # Save results

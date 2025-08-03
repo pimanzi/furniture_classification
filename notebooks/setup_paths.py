@@ -20,7 +20,7 @@ PATHS = {
 def print_paths():
     print("Project paths:")
     for name, path in PATHS.items():
-        exists = "✓" if os.path.exists(path) else "✗"
+        exists = "" if os.path.exists(path) else "✗"
         print(f"  {name:15}: {exists} {path}")
 
 if __name__ == "__main__":

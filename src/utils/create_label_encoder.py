@@ -34,7 +34,7 @@ def create_label_encoder():
     with open(encoder_path, 'wb') as f:
         pickle.dump(label_encoder, f)
     
-    print("✓ Label encoder created and saved to models/label_encoder.pkl")
+    print(" Label encoder created and saved to models/label_encoder.pkl")
     print(f"Classes: {list(label_encoder.classes_)}")
     print(f"Class mapping:")
     for i, class_name in enumerate(label_encoder.classes_):

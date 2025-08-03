@@ -25,7 +25,7 @@ def check_package(package_name):
         return False, str(e)
 
 def main():
-    print("🔍 Checking required packages...")
+    print(" Checking required packages...")
     print("=" * 50)
     
     all_good = True
