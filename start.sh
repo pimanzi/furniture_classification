@@ -19,16 +19,87 @@ python -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} load
 }
 
 # Check if model files exist
+echo "📁 Checking model files..."
 if [ ! -f "models/best_furniture_model.h5" ]; then
     echo "❌ Model file not found!"
+    ls -la models/ || echo "Models directory not found"
     exit 1
 fi
+
+# Check model file size
+MODEL_SIZE=$(stat -c%s "models/best_furniture_model.h5")
+echo "✅ Model file found: ${MODEL_SIZE} bytes"
 
 # Check if label encoder exists (after our fix)
 if [ ! -f "models/label_encoder.pkl" ]; then
     echo "❌ Label encoder not found!"
+    ls -la models/ || echo "Models directory listing failed"
     exit 1
 fi
+
+echo "✅ Label encoder found"
+
+# Test model loading with Python
+echo "🧠 Testing model loading..."
+python -c "
+import os
+import sys
+print('Current working directory:', os.getcwd())
+print('Models directory contents:')
+try:
+    import os
+    for f in os.listdir('models/'):
+        size = os.path.getsize(f'models/{f}')
+        print(f'  {f}: {size} bytes')
+except Exception as e:
+    print(f'Error listing models: {e}')
+
+print('Testing TensorFlow model loading...')
+try:
+    import tensorflow as tf
+    model = tf.keras.models.load_model('models/best_furniture_model.h5')
+    print('✅ Model loaded successfully!')
+    print(f'Model input shape: {model.input_shape}')
+    print(f'Model output shape: {model.output_shape}')
+except Exception as e:
+    print(f'❌ Model loading failed: {e}')
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+print('Testing label encoder...')
+try:
+    import pickle
+    with open('models/label_encoder.pkl', 'rb') as f:
+        label_encoder = pickle.load(f)
+    print(f'✅ Label encoder loaded: {list(label_encoder.classes_)}')
+except Exception as e:
+    print(f'❌ Label encoder loading failed: {e}')
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+print('Testing FurniturePredictor import...')
+try:
+    from src.utils.model_utils import FurniturePredictor
+    predictor = FurniturePredictor()
+    success = predictor.load_model()
+    if success:
+        print('✅ FurniturePredictor works!')
+    else:
+        print('❌ FurniturePredictor failed to load model')
+        sys.exit(1)
+except Exception as e:
+    print(f'❌ FurniturePredictor import/init failed: {e}')
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+print('🎉 All model tests passed!')
+" || {
+    echo "❌ Model loading test failed!"
+    exit 1
+}
 
 echo "✅ All checks passed. Starting Streamlit app..."
 
