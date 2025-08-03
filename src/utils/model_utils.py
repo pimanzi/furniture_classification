@@ -296,53 +296,106 @@ class FurniturePredictor:
             self.model = tf.keras.models.load_model(self.model_path)
             print(f"✓ Model loaded successfully from {self.model_path}")
             
-            # Try to load label encoder
+            # Try to load label encoder with fallback
+            self.label_encoder = None
             if os.path.exists(self.label_encoder_path):
-                with open(self.label_encoder_path, 'rb') as f:
-                    self.label_encoder = pickle.load(f)
-                print(f"✓ Label encoder loaded from {self.label_encoder_path}")
+                try:
+                    with open(self.label_encoder_path, 'rb') as f:
+                        self.label_encoder = pickle.load(f)
+                    print(f"✓ Label encoder loaded from {self.label_encoder_path}")
+                    print(f"Label encoder classes: {list(self.label_encoder.classes_)}")
+                    
+                    # Verify the label encoder has the expected classes
+                    expected_classes = set(self.class_names)
+                    actual_classes = set(str(cls) for cls in self.label_encoder.classes_)
+                    
+                    if expected_classes != actual_classes:
+                        print(f"⚠️ Label encoder class mismatch!")
+                        print(f"Expected: {self.class_names}")
+                        print(f"Actual: {list(self.label_encoder.classes_)}")
+                        print("Creating fallback encoder...")
+                        self.label_encoder = self._create_fallback_encoder()
+                        
+                except Exception as le_error:
+                    print(f"⚠️ Error loading label encoder: {str(le_error)}")
+                    print("Creating fallback encoder...")
+                    self.label_encoder = self._create_fallback_encoder()
             else:
-                print(f"Label encoder not found at {self.label_encoder_path}, using default class names")
-                print(f"Default classes: {self.class_names}")
+                print(f"Label encoder not found at {self.label_encoder_path}")
+                print("Creating fallback encoder...")
+                self.label_encoder = self._create_fallback_encoder()
                 
         except Exception as e:
             print(f"Error loading model: {str(e)}")
             return False
         return True
     
+    def _create_fallback_encoder(self):
+        """Create a fallback label encoder with correct class order"""
+        from sklearn.preprocessing import LabelEncoder
+        import numpy as np
+        
+        fallback_encoder = LabelEncoder()
+        # Manually set the classes in the correct order
+        fallback_encoder.classes_ = np.array(self.class_names, dtype=object)
+        print(f"✓ Fallback encoder created with classes: {self.class_names}")
+        return fallback_encoder
+    
     def predict_image(self, image_path):
         """Make prediction on a single image"""
         if self.model is None:
             if not self.load_model():
+                print("❌ Failed to load model")
                 return None
         
         try:
             # Load and preprocess image
+            print(f"📸 Loading image: {image_path}")
             img = load_img(image_path, target_size=(self.img_size, self.img_size))
             img_array = img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0)
             img_array = img_array / 255.0
             
+            print(f"🔍 Making prediction...")
             # Make prediction
             predictions = self.model.predict(img_array, verbose=0)
             confidence = np.max(predictions[0])
             predicted_class_idx = np.argmax(predictions[0])
             
-            # Get class name
-            if self.label_encoder is not None:
-                predicted_class = self.label_encoder.classes_[predicted_class_idx]
-            else:
-                predicted_class = self.class_names[predicted_class_idx]
+            print(f"🎯 Raw prediction index: {predicted_class_idx}")
+            print(f"🎯 Confidence: {confidence:.3f}")
             
-            return {
+            # Get class name with robust error handling
+            try:
+                if self.label_encoder is not None:
+                    if hasattr(self.label_encoder, 'classes_') and len(self.label_encoder.classes_) > predicted_class_idx:
+                        predicted_class = str(self.label_encoder.classes_[predicted_class_idx])
+                        print(f"✓ Using label encoder: {predicted_class}")
+                    else:
+                        print("⚠️ Label encoder classes_ issue, using default")
+                        predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
+                else:
+                    print("⚠️ No label encoder, using default class names")
+                    predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
+            except Exception as class_error:
+                print(f"❌ Error getting class name: {str(class_error)}")
+                predicted_class = self.class_names[predicted_class_idx] if predicted_class_idx < len(self.class_names) else "Unknown"
+            
+            result = {
                 'predicted_class': predicted_class,
                 'confidence': float(confidence),
                 'all_predictions': predictions[0].tolist(),
                 'class_names': self.class_names
             }
             
+            print(f"✅ Prediction successful: {predicted_class} ({confidence:.3f})")
+            return result
+            
         except Exception as e:
-            print(f"Error making prediction: {str(e)}")
+            print(f"❌ Error making prediction: {str(e)}")
+            import traceback
+            print("Full traceback:")
+            traceback.print_exc()
             return None
     
     def predict_batch(self, image_paths):

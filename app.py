@@ -619,10 +619,42 @@ def show_predict():
                                 )
                                 st.plotly_chart(fig, use_container_width=True)
                         else:
-                            st.error("Failed to classify image. Please try again.")
+                            st.error("❌ Failed to classify image. Please try again.")
+                            
+                            # Show debug info in development
+                            with st.expander("🔍 Debug Information"):
+                                st.write("**Possible causes:**")
+                                st.write("- Model or label encoder loading issue")
+                                st.write("- Image preprocessing error") 
+                                st.write("- TensorFlow/prediction error")
+                                st.write("- File path or permissions issue")
+                                
+                                st.write("**Model status:**")
+                                if hasattr(st.session_state, 'predictor'):
+                                    st.write(f"- Model loaded: {st.session_state.predictor.model is not None}")
+                                    st.write(f"- Label encoder loaded: {st.session_state.predictor.label_encoder is not None}")
+                                    if st.session_state.predictor.label_encoder:
+                                        st.write(f"- Label encoder classes: {list(st.session_state.predictor.label_encoder.classes_)}")
                     
                     except Exception as e:
-                        st.error(f"Error: {str(e)}")
+                        st.error(f"❌ Prediction Error: {str(e)}")
+                        
+                        # Show debug info
+                        with st.expander("🔍 Error Details"):
+                            import traceback
+                            st.code(traceback.format_exc())
+                            
+                            st.write("**System Information:**")
+                            try:
+                                import tensorflow as tf
+                                st.write(f"- TensorFlow version: {tf.__version__}")
+                            except:
+                                st.write("- TensorFlow: Not available")
+                            
+                            st.write(f"- Python version: {os.sys.version}")
+                            st.write(f"- Image path exists: {os.path.exists(temp_path) if 'temp_path' in locals() else 'Unknown'}")
+                            
+                        st.info("💡 **Tip**: Try uploading a different image or refresh the page to reload the model.")
                     
                     finally:
                         if os.path.exists(temp_path):
