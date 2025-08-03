@@ -272,29 +272,115 @@ class FurnitureModelTrainer:
         }
 
 class FurniturePredictor:
-    def __init__(self, model_path='models/best_furniture_model.h5', 
-                 label_encoder_path='models/label_encoder.pkl'):
+    def __init__(self, model_path=None, label_encoder_path=None):
         if not TENSORFLOW_AVAILABLE:
             raise ImportError("TensorFlow is required for predictions but is not available.")
+        
+        # Use absolute paths based on current working directory
+        base_dir = os.getcwd()
+        
+        if model_path is None:
+            self.model_path = os.path.join(base_dir, 'models', 'best_furniture_model.h5')
+        else:
+            self.model_path = model_path
             
-        self.model_path = model_path
-        self.label_encoder_path = label_encoder_path
+        if label_encoder_path is None:
+            self.label_encoder_path = os.path.join(base_dir, 'models', 'label_encoder.pkl')
+        else:
+            self.label_encoder_path = label_encoder_path
+            
         self.model = None
         self.label_encoder = None
         self.class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
         self.img_size = 224
         
+        print(f"🔍 Model path: {self.model_path}")
+        print(f"🔍 Label encoder path: {self.label_encoder_path}")
+        print(f"🔍 Current working directory: {base_dir}")
+        print(f"🔍 Model file exists: {os.path.exists(self.model_path)}")
+        print(f"🔍 Label encoder file exists: {os.path.exists(self.label_encoder_path)}")
+        
     def load_model(self):
         """Load the trained model and label encoder"""
         try:
+            # Debug: List all files in models directory
+            models_dir = os.path.dirname(self.model_path)
+            if os.path.exists(models_dir):
+                print(f"📁 Files in {models_dir}:")
+                for file in os.listdir(models_dir):
+                    full_path = os.path.join(models_dir, file)
+                    if os.path.isfile(full_path):
+                        size = os.path.getsize(full_path)
+                        print(f"  📄 {file} ({size:,} bytes)")
+                    else:
+                        print(f"  📁 {file}/")
+            else:
+                print(f"❌ Models directory does not exist: {models_dir}")
+            
             if not os.path.exists(self.model_path):
-                print(f"Model file not found at {self.model_path}")
+                print(f"❌ Model file not found at {self.model_path}")
                 print("Please train a model first using the Retrain section.")
                 return False
                 
-            print(f"Loading model from: {self.model_path}")
-            self.model = tf.keras.models.load_model(self.model_path)
-            print(f"✓ Model loaded successfully from {self.model_path}")
+            print(f"📸 Loading model from: {self.model_path}")
+            
+            # Try multiple loading strategies for compatibility
+            model_loaded = False
+            
+            # Strategy 1: Standard loading
+            try:
+                self.model = tf.keras.models.load_model(self.model_path)
+                model_loaded = True
+                print(f"✓ Model loaded successfully with standard method")
+            except Exception as e1:
+                print(f"⚠️ Standard loading failed: {str(e1)}")
+                
+                # Strategy 2: Load with compile=False
+                try:
+                    self.model = tf.keras.models.load_model(self.model_path, compile=False)
+                    model_loaded = True
+                    print(f"✓ Model loaded successfully with compile=False")
+                except Exception as e2:
+                    print(f"⚠️ Loading with compile=False failed: {str(e2)}")
+                    
+                    # Strategy 3: Try SavedModel format with TFSMLayer (Keras 3 compatible)
+                    savedmodel_path = os.path.join(os.path.dirname(self.model_path), 'furniture_model_savedmodel')
+                    if os.path.exists(savedmodel_path):
+                        try:
+                            print(f"🔄 Trying SavedModel with TFSMLayer: {savedmodel_path}")
+                            # Create a wrapper model using TFSMLayer
+                            tfsm_layer = tf.keras.layers.TFSMLayer(savedmodel_path, call_endpoint='serve')
+                            
+                            # Create a simple model wrapper
+                            inputs = tf.keras.Input(shape=(224, 224, 3))
+                            outputs = tfsm_layer(inputs)
+                            self.model = tf.keras.Model(inputs=inputs, outputs=outputs)
+                            
+                            model_loaded = True
+                            print(f"✓ SavedModel loaded successfully with TFSMLayer")
+                        except Exception as e3:
+                            print(f"⚠️ SavedModel with TFSMLayer failed: {str(e3)}")
+                    
+                    # Strategy 4: Try the alternative H5 model
+                    if not model_loaded:
+                        alt_model_path = os.path.join(os.path.dirname(self.model_path), 'Training_0802_pax.h5')
+                        if os.path.exists(alt_model_path):
+                            try:
+                                print(f"🔄 Trying alternative H5 model: {alt_model_path}")
+                                self.model = tf.keras.models.load_model(alt_model_path)
+                                model_loaded = True
+                                print(f"✓ Alternative H5 model loaded successfully")
+                                # Update label encoder path to match
+                                alt_le_path = os.path.join(os.path.dirname(self.label_encoder_path), 'Training_0802_pax_label_encoder.pkl')
+                                if os.path.exists(alt_le_path):
+                                    self.label_encoder_path = alt_le_path
+                                    print(f"✓ Updated label encoder path to: {alt_le_path}")
+                            except Exception as e4:
+                                print(f"⚠️ Alternative H5 model loading failed: {str(e4)}")
+            
+            if not model_loaded:
+                print(f"❌ All model loading strategies failed")
+                return False
             
             # Try to load label encoder with fallback
             self.label_encoder = None
