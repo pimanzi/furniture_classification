@@ -453,6 +453,22 @@ except Exception as e:
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'Home'
 
+# Initialize training state variables
+if 'training_in_progress' not in st.session_state:
+    st.session_state.training_in_progress = False
+if 'training_completed' not in st.session_state:
+    st.session_state.training_completed = False
+if 'training_results' not in st.session_state:
+    st.session_state.training_results = None
+
+# Check if running in deployment environment
+IS_DEPLOYED = (
+    'STREAMLIT_SHARING' in os.environ or 
+    'RENDER' in os.environ or 
+    'HEROKU' in os.environ or
+    'RAILWAY' in os.environ
+)
+
 def navigation():    
     # Initialize session state if not exists
     if 'current_page' not in st.session_state:
@@ -462,25 +478,44 @@ def navigation():
     if 'db' not in st.session_state:
         st.session_state.db = FurnitureDB()
     
+    # Prevent navigation during training
+    if st.session_state.get('training_in_progress', False):
+        st.warning("⏳ Training in progress... Navigation disabled to prevent interruption.")
+        return
+    
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
         if st.button("🏠 Home", key="nav_home"):
+            # Clear training results when navigating away from retrain page
+            if st.session_state.current_page == 'Retrain':
+                st.session_state.training_completed = False
+                st.session_state.training_results = None
             st.session_state.current_page = 'Home'
             st.rerun()
     
     with col2:
         if st.button("🔮 Predict", key="nav_predict"):
+            if st.session_state.current_page == 'Retrain':
+                st.session_state.training_completed = False
+                st.session_state.training_results = None
             st.session_state.current_page = 'Predict'
             st.rerun()
     
     with col3:
         if st.button("📊 Analytics", key="nav_analytics"):
+            if st.session_state.current_page == 'Retrain':
+                st.session_state.training_completed = False
+                st.session_state.training_results = None
             st.session_state.current_page = 'Analytics'
             st.rerun()
     
     with col4:
-        if st.button("🔄 Retrain", key="nav_retrain"):
+        nav_button_text = "🔄 Retrain"
+        if st.session_state.get('training_completed', False):
+            nav_button_text = "🔄 Retrain ✅"
+        
+        if st.button(nav_button_text, key="nav_retrain"):
             st.session_state.current_page = 'Retrain'
             if 'selected_files' not in st.session_state:
                 st.session_state.selected_files = []
@@ -984,12 +1019,60 @@ def show_retrain():
     </div>
     """, unsafe_allow_html=True)
     
+    # Show training status if in progress or completed
+    if st.session_state.get('training_in_progress', False):
+        st.warning("⏳ **Training in Progress**")
+        st.info("Please wait while the model is being trained. Do not navigate away from this page.")
+        if st.button("🛑 Cancel Training", type="secondary"):
+            st.session_state.training_in_progress = False
+            st.rerun()
+        return
+    
+    if st.session_state.get('training_completed', False) and st.session_state.get('training_results'):
+        st.success("🎉 **Training Completed Successfully!**")
+        
+        results = st.session_state.training_results
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Final Accuracy", f"{results['final_accuracy']:.1%}")
+        with col2:
+            st.metric("Training Time", f"{results['training_time']:.1f} min")
+        with col3:
+            st.metric("Total Data Used", results['total_data_count'])
+        
+        st.info("🔄 **Model Updated!** New predictions will use the retrained model.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🆕 Start New Training Session", type="primary"):
+                st.session_state.training_completed = False
+                st.session_state.training_results = None
+                st.session_state.selected_files = []
+                st.session_state.file_labels = {}
+                st.rerun()
+        
+        with col2:
+            if st.button("🔮 Test Model", type="secondary"):
+                st.session_state.current_page = 'Predict'
+                st.rerun()
+        
+        st.markdown("---")
+    
     st.markdown("### 📤 Upload Training Images")
     st.markdown("""
     <div style="color: #333333; margin-bottom: 1rem; font-size: 1.1rem;">
     Upload furniture images with labels to retrain the model with your data combined with existing training data.
     </div>
     """, unsafe_allow_html=True)
+    
+    # Show deployment-specific warnings
+    if IS_DEPLOYED:
+        st.warning("""
+        **⚠️ Deployment Environment Detected**
+        - Training epochs will be limited to 5 to prevent timeout
+        - Use fewer images (5-20) for optimal performance
+        - Training may take 2-5 minutes depending on data size
+        """)
     
     # Show training requirements
     st.info("""
@@ -1083,12 +1166,13 @@ def show_retrain():
             help="Name for this training session"
         )
         
+        max_epochs = 5 if IS_DEPLOYED else 20
         epochs = st.slider(
             "Training Epochs",
-            min_value=5,
-            max_value=20,
-            value=10,
-            help="Number of training epochs"
+            min_value=1,
+            max_value=max_epochs,
+            value=min(10, max_epochs),
+            help=f"Number of training epochs (limited to {max_epochs} in deployment)"
         )
         
         clear_user_data = st.checkbox(
@@ -1140,7 +1224,11 @@ def show_retrain():
                     )
                     st.session_state.file_labels[selected_file.name] = new_label
             
-            if st.form_submit_button("🚀 Start Training", type="primary"):
+            training_button_text = "🚀 Start Training"
+            if IS_DEPLOYED:
+                training_button_text += f" ({epochs} epochs, ~{len(st.session_state.selected_files) * 0.1:.1f} min)"
+            
+            if st.form_submit_button(training_button_text, type="primary"):
                 if len(st.session_state.selected_files) >= 5:
                     start_retraining(st.session_state.selected_files, st.session_state.file_labels, session_name, epochs, clear_user_data)
                 else:
@@ -1165,10 +1253,54 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         if not st.checkbox("Continue training anyway (may have reduced accuracy)", key="force_train"):
             return
     
+    # Initialize training state
+    if 'training_in_progress' not in st.session_state:
+        st.session_state.training_in_progress = False
+    
+    if 'training_completed' not in st.session_state:
+        st.session_state.training_completed = False
+        
+    if 'training_results' not in st.session_state:
+        st.session_state.training_results = None
+    
+    # Prevent multiple training sessions
+    if st.session_state.training_in_progress:
+        st.warning("⏳ Training is already in progress. Please wait...")
+        return
+    
+    # Show results if training was completed
+    if st.session_state.training_completed and st.session_state.training_results:
+        st.success("🎉 Model Training Completed!")
+        
+        results = st.session_state.training_results
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Final Accuracy", f"{results['final_accuracy']:.1%}")
+        with col2:
+            st.metric("Training Time", f"{results['training_time']:.1f} min")
+        with col3:
+            st.metric("Total Data Used", results['total_data_count'])
+        
+        st.info("🔄 Model updated! New predictions will use the retrained model.")
+        
+        # Reset training state
+        if st.button("🔄 Start New Training Session"):
+            st.session_state.training_completed = False
+            st.session_state.training_results = None
+            st.rerun()
+        return
+    
+    # Start training
+    st.session_state.training_in_progress = True
     progress_bar = st.progress(0)
     status_text = st.empty()
     
     try:
+        # Reduce epochs for deployed environment to prevent timeout
+        adjusted_epochs = min(epochs, 5) if 'STREAMLIT_SHARING' in os.environ or 'RENDER' in os.environ else epochs
+        if adjusted_epochs < epochs:
+            st.warning(f"⚠️ Reducing epochs from {epochs} to {adjusted_epochs} for deployment environment")
+        
         if clear_user_data:
             status_text.text("🧹 Clearing previous user data...")
             st.session_state.db.clear_user_data()
@@ -1214,20 +1346,27 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
             st.error(f"❌ Training failed: {message}")
             progress_bar.progress(0)
             status_text.text("❌ Training requirements not met!")
+            st.session_state.training_in_progress = False
             return
         
         progress_bar.progress(40)
         
-        status_text.text("🧠 Training model...")
+        status_text.text(f"🧠 Training model ({adjusted_epochs} epochs)...")
         
         model_save_path = f"models/{session_name}.h5"
         os.makedirs("models", exist_ok=True)
         
+        # Add timeout protection for training
+        import time
+        start_time = time.time()
+        
         training_results = st.session_state.trainer.train_model(
             combined_data, 
-            epochs=epochs, 
+            epochs=adjusted_epochs, 
             model_save_path=model_save_path
         )
+        
+        elapsed_time = time.time() - start_time
         
         progress_bar.progress(80)
         
@@ -1249,31 +1388,53 @@ def start_retraining(uploaded_files, labels, session_name, epochs, clear_user_da
         }
         st.session_state.db.log_metrics(session_id, metrics)
         
+        # Create new predictor instance for retrained model
+        try:
+            st.session_state.predictor = FurniturePredictor(
+                model_path=model_save_path,
+                label_encoder_path=model_save_path.replace('.h5', '_label_encoder.pkl')
+            )
+        except Exception as pred_error:
+            st.warning(f"Warning: Could not update predictor: {pred_error}")
+        
+        # Store results in session state
+        st.session_state.training_results = {
+            'final_accuracy': training_results['final_accuracy'],
+            'training_time': training_results['training_time'],
+            'total_data_count': len(combined_data),
+            'session_name': session_name
+        }
+        
         progress_bar.progress(100)
         status_text.text("✅ Training completed successfully!")
         
-        st.success("🎉 Model Training Completed!")
+        # Mark training as completed
+        st.session_state.training_completed = True
+        st.session_state.training_in_progress = False
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Final Accuracy", f"{training_results['final_accuracy']:.1%}")
-        with col2:
-            st.metric("Training Time", f"{training_results['training_time']:.1f} min")
-        with col3:
-            st.metric("Total Data Used", len(combined_data))
-        
-        # Create new predictor instance for retrained model
-        st.session_state.predictor = FurniturePredictor(
-            model_path=model_save_path,
-            label_encoder_path=model_save_path.replace('.h5', '_label_encoder.pkl')
-        )
-        
-        st.info("🔄 Model updated! New predictions will use the retrained model.")
+        # Force rerun to show results
+        time.sleep(1)  # Brief pause to ensure state is saved
+        st.rerun()
         
     except Exception as e:
-        st.error(f"Training failed: {str(e)}")
+        st.error(f"❌ Training failed: {str(e)}")
+        
+        # Show more specific error information
+        if "timeout" in str(e).lower():
+            st.error("🕐 Training timed out. Try reducing the number of epochs or images.")
+        elif "memory" in str(e).lower():
+            st.error("� Out of memory. Try reducing the number of images or using smaller images.")
+        else:
+            st.error("💥 Unexpected error occurred during training.")
+        
+        with st.expander("🔍 Error Details"):
+            import traceback
+            st.code(traceback.format_exc())
+        
         progress_bar.progress(0)
         status_text.text("❌ Training failed!")
+        st.session_state.training_in_progress = False
+        st.session_state.training_completed = False
     
     finally:
         if 'temp_dir' in locals() and os.path.exists(temp_dir):
