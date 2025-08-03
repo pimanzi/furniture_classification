@@ -272,7 +272,7 @@ class FurnitureModelTrainer:
         }
 
 class FurniturePredictor:
-    def __init__(self, model_path='models/furniture_savedmodel', 
+    def __init__(self, model_path='models/best_furniture_model.h5', 
                  label_encoder_path='models/label_encoder.pkl'):
         if not TENSORFLOW_AVAILABLE:
             raise ImportError("TensorFlow is required for predictions but is not available.")
@@ -288,24 +288,13 @@ class FurniturePredictor:
         """Load the trained model and label encoder"""
         try:
             if not os.path.exists(self.model_path):
-                print(f"Model directory not found at {self.model_path}")
+                print(f"Model file not found at {self.model_path}")
                 print("Please train a model first using the Retrain section.")
                 return False
                 
-            print(f"Loading SavedModel from: {self.model_path}")
-            
-            # For SavedModel format, we need to use tf.saved_model.load for loading
-            # but tf.keras.models.load_model for inference in Keras-compatible way
-            try:
-                # First try loading as Keras model (works if saved with model.export())
-                self.model = tf.keras.models.load_model(self.model_path)
-                print(f"✓ Model loaded as Keras model from {self.model_path}")
-            except Exception as keras_error:
-                print(f"Keras loading failed: {str(keras_error)}")
-                print("Trying to load as raw SavedModel...")
-                # Fallback to raw SavedModel loading
-                self.model = tf.saved_model.load(self.model_path)
-                print(f"✓ Model loaded as SavedModel from {self.model_path}")
+            print(f"Loading model from: {self.model_path}")
+            self.model = tf.keras.models.load_model(self.model_path)
+            print(f"✓ Model loaded successfully from {self.model_path}")
             
             # Try to load label encoder with fallback
             self.label_encoder = None
@@ -369,20 +358,8 @@ class FurniturePredictor:
             
             print(f"🔍 Making prediction...")
             
-            # Make prediction - handle both Keras models and raw SavedModels
-            try:
-                # Try Keras model predict() method first
-                predictions = self.model.predict(img_array, verbose=0)
-            except AttributeError:
-                # If it's a raw SavedModel, use the inference function
-                print("Using SavedModel inference function...")
-                infer = self.model.signatures["serving_default"]
-                # Get the input key name
-                input_key = list(infer.structured_input_signature[1].keys())[0]
-                prediction_result = infer(**{input_key: tf.constant(img_array, dtype=tf.float32)})
-                # Get the output
-                output_key = list(prediction_result.keys())[0]
-                predictions = prediction_result[output_key].numpy()
+            # Make prediction with regular Keras model
+            predictions = self.model.predict(img_array, verbose=0)
             
             confidence = np.max(predictions[0])
             predicted_class_idx = np.argmax(predictions[0])

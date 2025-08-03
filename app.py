@@ -8,8 +8,7 @@ import shutil
 from PIL import Image
 
 from src.utils.database import FurnitureDB
-from src.utils.model_utils import FurnitureModelTrainer
-from src.utils.memory_optimized_model import get_global_predictor
+from src.utils.model_utils import FurniturePredictor, FurnitureModelTrainer
 
 st.set_page_config(
     page_title="Furniture AI",
@@ -418,13 +417,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize memory-optimized predictor
-print("🔄 Initializing memory-optimized predictor...")
+# Initialize predictor
+print("🔄 Initializing predictor...")
 try:
-    # Use global predictor to save memory
     if 'predictor' not in st.session_state:
-        st.session_state.predictor = get_global_predictor()
-        print("✓ Memory-optimized predictor initialized successfully")
+        print("Creating new FurniturePredictor instance...")
+        st.session_state.predictor = FurniturePredictor()
+        print("Loading model...")
+        success = st.session_state.predictor.load_model()
+        if success:
+            print("✓ Predictor initialized and model loaded successfully")
+        else:
+            print("⚠️ Model loading failed, predictions may not work")
     else:
         print("✓ Using existing predictor instance")
 except Exception as e:
@@ -1312,7 +1316,7 @@ def show_debug():
                 from src.utils.model_utils import FurniturePredictor
                 st.success("✅ Successfully imported FurniturePredictor")
                 
-                predictor = get_global_predictor()
+                predictor = FurniturePredictor()
                 st.success("✅ Predictor initialized")
                 
                 success = predictor.load_model()

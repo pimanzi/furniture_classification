@@ -20,15 +20,13 @@ python -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} load
 
 # Check if model files exist
 echo "📁 Checking model files..."
-if [ ! -d "models/furniture_savedmodel" ]; then
-    echo "❌ SavedModel directory not found!"
+if [ ! -f "models/best_furniture_model.h5" ]; then
+    echo "❌ H5 model file not found!"
     ls -la models/ || echo "Models directory not found"
     exit 1
 fi
 
-# Check SavedModel directory contents
-echo "✅ SavedModel directory found"
-ls -la models/furniture_savedmodel/ || echo "Could not list SavedModel contents"
+echo "✅ H5 model file found"
 
 # Check if label encoder exists (after our fix)
 if [ ! -f "models/label_encoder.pkl" ]; then
@@ -77,21 +75,18 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-print('Testing memory-optimized predictor with SavedModel...')
+print('Testing FurniturePredictor with H5 model...')
 try:
-    from src.utils.memory_optimized_model import get_global_predictor
-    predictor = get_global_predictor()
-    health = predictor.health_check()
-    if health.get('status') == 'healthy':
-        print('✅ Memory-optimized predictor works with SavedModel!')
-        output_shape = health.get('output_shape', 'Unknown')
-        print(f'Model output shape: {output_shape}')
+    from src.utils.model_utils import FurniturePredictor
+    predictor = FurniturePredictor()
+    success = predictor.load_model()
+    if success:
+        print('✅ FurniturePredictor works with H5 model!')
     else:
-        message = health.get('message', 'Unknown error')
-        print(f'❌ Memory-optimized predictor health check failed: {message}')
+        print('❌ FurniturePredictor failed to load H5 model')
         sys.exit(1)
 except Exception as e:
-    print(f'❌ Memory-optimized predictor import/init failed: {e}')
+    print(f'❌ FurniturePredictor import/init failed: {e}')
     import traceback
     traceback.print_exc()
     sys.exit(1)
