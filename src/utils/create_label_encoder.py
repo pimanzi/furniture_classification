@@ -13,6 +13,7 @@ Author: Furniture Classification Project
 """
 import pickle
 import os
+import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 def create_label_encoder():
@@ -20,9 +21,10 @@ def create_label_encoder():
     # Define the class names exactly as they should be
     class_names = ['Almirah', 'Chair', 'Fridge', 'Table', 'TV']
     
-    # Create label encoder
+    # Create label encoder and manually set classes to maintain order
+    # Note: LabelEncoder.fit() sorts alphabetically, so we set classes_ directly
     label_encoder = LabelEncoder()
-    label_encoder.fit(class_names)
+    label_encoder.classes_ = np.array(class_names, dtype=object)
     
     # Ensure models directory exists
     os.makedirs('models', exist_ok=True)
