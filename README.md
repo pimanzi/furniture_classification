@@ -19,18 +19,15 @@ A comprehensive deep learning application for classifying furniture images with 
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 
-
 ## Demo video
-**Dataset**: [Demo Video](https://vimeo.com/1106846160?share=copy#t=30.592)
 
+**Demo**: [Demo Video](https://youtu.be/PVeniwGsQQ8)
 
 ## Overview
-
 
 This project implements a modern furniture classification system using deep learning techniques. The system can classify furniture images into five categories: Almirah, Chair, Fridge, Table, and TV. Built with EfficientNetB0 architecture and transfer learning, it provides high accuracy classification with a user-friendly web interface.
 
 **Dataset**: [Furniture Image Dataset on Kaggle](https://www.kaggle.com/datasets/udaysankarmukherjee/furniture-image-dataset)
-
 
 ## Dataset Information
 
@@ -414,6 +411,7 @@ The application is ready for deployment on Render with proper configuration:
    - Start Command: `./deploy/start.sh`
 
 **Key Features for Production:**
+
 - ✅ TensorFlow 2.15.0 compatibility
 - ✅ No Poetry conflicts (uses requirements.txt only)
 - ✅ Health checks and error handling
