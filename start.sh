@@ -82,11 +82,13 @@ try:
     from src.utils.memory_optimized_model import get_global_predictor
     predictor = get_global_predictor()
     health = predictor.health_check()
-    if health['status'] == 'healthy':
+    if health.get('status') == 'healthy':
         print('✅ Memory-optimized predictor works with SavedModel!')
-        print(f'Model output shape: {health.get("output_shape", "Unknown")}')
+        output_shape = health.get('output_shape', 'Unknown')
+        print(f'Model output shape: {output_shape}')
     else:
-        print(f'❌ Memory-optimized predictor health check failed: {health["message"]}')
+        message = health.get('message', 'Unknown error')
+        print(f'❌ Memory-optimized predictor health check failed: {message}')
         sys.exit(1)
 except Exception as e:
     print(f'❌ Memory-optimized predictor import/init failed: {e}')
